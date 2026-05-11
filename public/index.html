@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Tareas</title>
+</head>
+<body>
+    
+    <form id="formulario">
+        <input id="descripcion" placeholder="Nueva tarea" name="descripcion">
+        <input id="encargado" placeholder="Encargado" name="encargado">
+        <input id="fecha" type="date" name="fecha">
+        <button type="submit">Agregar</button>
+    </form>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Descripción</th>
+                <th>Encargado</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody id="lista"></tbody>
+    </table>
+
+    <script> 
+        const API = "http://localhost:3000/tareas";
+        const input = document.getElementById("descripcion");
+        const encargado = document.getElementById("encargado");
+        const fecha = document.getElementById("fecha");
+        const lista = document.getElementById("lista");
+        
+        const formulario = document.getElementById("formulario");
+
+        function formatearFecha(fechaISO) {
+            if (!fechaISO) return "";
+
+            const fechaObj = new Date(fechaISO);
+            return new Intl.DateTimeFormat("es-ES", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "2-digit"
+            }).format(fechaObj);
+        }
+
+        async function cargar() {
+            try {
+                const res = await fetch(API);
+
+                if (!res.ok) {
+                    const mensaje = await res.text();
+                    alert(mensaje || "Error al cargar las tareas");
+                    return;
+                }
+
+                const data = await res.json();
+                lista.innerHTML = "";
+                data.forEach(t => {
+                    lista.innerHTML += `<tr><td>${t.descripcion}</td><td>${t.encargado}</td><td>${formatearFecha(t.fecha)}</td></tr>`;
+                });
+            } catch (error) {
+                alert("No se pudo conectar con el servidor");
+                console.error(error);
+            }
+        }
+
+        async function agregar() {
+            const descripcion = input.value.trim();
+            const encargadoValue = encargado.value.trim();
+            const fechaValue = fecha.value;
+
+            try {
+                const res = await fetch(API, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ descripcion, fecha: fechaValue, encargado: encargadoValue })
+                });
+
+                if (!res.ok) {
+                    const mensaje = await res.text();
+                    alert(mensaje || "No se pudo guardar la tarea");
+                    return;
+                }
+
+                input.value = "";
+                fecha.value = "";
+                encargado.value = "";
+                cargar();
+            } catch (error) {
+                alert("No se pudo conectar con el servidor");
+                console.error(error);
+            }
+        }
+
+        formulario.addEventListener("submit", (e) => {
+            e.preventDefault();
+            agregar();
+        });
+
+        cargar(); // Carga inicial
+    </script>
+</body>
+</html>
