@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Stock</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f4f9; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .header-container { display: flex; justify-content: space-between; width: 90%; max-width: 1000px; align-items: center; }
+        form { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        table { width: 90%; max-width: 1000px; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #2196F3; color: white; }
+        .btn-edit { color: #2196F3; cursor: pointer; margin-right: 10px; background: none; border: none; font-weight: bold; }
+        .btn-delete { color: #ff4d4d; cursor: pointer; background: none; border: none; font-weight: bold; }
+        .btn-save { color: #4CAF50; cursor: pointer; background: none; border: none; font-weight: bold; }
+        .back-link { text-decoration: none; color: #2196F3; font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <a href="index.html" class="back-link">← Volver a mis listas</a>
+        <h1 id="titulo-lista">Cargando...</h1>
+    </div>
+
+    <form id="formulario">
+        <input id="producto" placeholder="Producto" required>
+        <input id="marca" placeholder="Marca">
+        <input id="unidad" placeholder="Unidad (ej: 1kg)">
+        <input id="precio" type="number" placeholder="Precio">
+        <input id="fecha" type="date">
+        <button type="submit" style="background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Agregar</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Marca</th>
+                <th>Unidad</th>
+                <th>Precio</th>
+                <th>Vencimiento</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="lista-cuerpo"></tbody>
+    </table>
+
+    <script>
+        const API = "http://localhost:3000/stock";
+        const listaActiva = localStorage.getItem('lista_activa');
+        document.getElementById('titulo-lista').innerText = "Stock: " + listaActiva;
+
+        // Cargar productos filtrados por categoría
+        async function cargar() {
+            try {
+                const res = await fetch(`${API}?categoria=${listaActiva}`);
+                const data = await res.json();
+                const cuerpo = document.getElementById("lista-cuerpo");
+                cuerpo.innerHTML = "";
+
+                data.forEach(t => {
+                    cuerpo.innerHTML += `
+                        <tr id="fila-${t.id}">
+                            <td><span class="dato">${t.producto}</span></td>
+                            <td><span class="dato">${t.marca}</span></td>
+                            <td><span class="dato">${t.unidad}</span></td>
+                            <td>$<span class="dato">${t.precio}</span></td>
+                            <td><span class="dato">${t.fecha ? t.fecha.split('T')[0] : ''}</span></td>
+                            <td>
+                                <button class="btn-edit" onclick="activarEdicion(${t.id})">Editar</button>
+                                <button class="btn-delete" onclick="borrarUno(${t.id})">Eliminar</button>
+                            </td>
+                        </tr>`;
+                });
+            } catch (e) { console.error("Error al cargar", e); }
+        }
+
+        // Activar campos de texto en la fila
+        function activarEdicion(id) {
+            const fila = document.getElementById(`fila-${id}`);
+            const celdas = fila.getElementsByClassName('dato');
+            const valoresActuales = Array.from(celdas).map(span => span.innerText.replace('$', ''));
+
+            fila.innerHTML = `
+                <td><input type="text" id="edit-prod-${id}" value="${valoresActuales[0]}"></td>
+                <td><input type="text" id="edit-marc-${id}" value="${valoresActuales[1]}"></td>
+                <td><input type="text" id="edit-unid-${id}" value="${valoresActuales[2]}"></td>
+                <td><input type="number" id="edit-prec-${id}" value="${valoresActuales[3]}"></td>
+                <td><input type="date" id="edit-fech-${id}" value="${valoresActuales[4]}"></td>
+                <td>
+                    <button class="btn-save" onclick="guardarEdicion(${id})">Guardar</button>
+                    <button class="btn-delete" onclick="cargar()">Cancelar</button>
+                </td>
+            `;
+        }
+
+        // Enviar la actualización al servidor (Método PUT)
+        async function guardarEdicion(id) {
+            const actualizado = {
+                producto: document.getElementById(`edit-prod-${id}`).value,
+                marca: document.getElementById(`edit-marc-${id}`).value,
+                unidad: document.getElementById(`edit-unid-${id}`).value,
+                precio: document.getElementById(`edit-prec-${id}`).value,
+                fecha: document.getElementById(`edit-fech-${id}`).value,
+                categoria: listaActiva
+            };
+
+            const res = await fetch(`${API}/${id}`, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(actualizado)
+            });
+
+            if (res.ok) cargar();
+            else alert("Error al actualizar");
+        }
+
+        // Agregar nuevo producto con categoría
+        document.getElementById("formulario").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nuevo = {
+                producto: document.getElementById("producto").value,
+                marca: document.getElementById("marca").value,
+                unidad: document.getElementById("unidad").value,
+                precio: document.getElementById("precio").value,
+                fecha: document.getElementById("fecha").value,
+                categoria: listaActiva
+            };
+
+            await fetch(API, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(nuevo)
+            });
+            
+            e.target.reset();
+            cargar();
+        });
+
+        async function borrarUno(id) {
+            if (confirm("¿Eliminar producto?")) {
+                await fetch(`${API}/${id}`, { method: "DELETE" });
+                cargar();
+            }
+        }
+
+        cargar();
+    </script>
+</body>
+</html>
