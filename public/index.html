@@ -7,17 +7,27 @@
 <body>
     
     <form id="formulario">
-        <input id="descripcion" placeholder="Nueva tarea" name="descripcion">
-        <input id="encargado" placeholder="Encargado" name="encargado">
+        <input id="producto" placeholder="Nombre del producto" name="producto">
+        <input id="marca" placeholder="Marca" name="marca">
+        <input id="unidad" placeholder="Unidad" name="unidad">
+        <input id="precio" placeholder="Precio x unidad" name="precio">
         <input id="fecha" type="date" name="fecha">
         <button type="submit">Agregar</button>
     </form>
+
+    <button onclick="borrarTodo()" style="background-color: #ff4d4d; color: white; margin-top: 10px; cursor: pointer;">
+        Vaciar Lista
+    </button>
+
     <table border="1">
         <thead>
             <tr>
-                <th>Descripción</th>
-                <th>Encargado</th>
+                <th>Producto</th>
+                <th>Marca</th>
+                <th>Unidad</th>
+                <th>Precio</th>
                 <th>Fecha</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody id="lista"></tbody>
@@ -25,8 +35,10 @@
 
     <script> 
         const API = "http://localhost:3000/tareas";
-        const input = document.getElementById("descripcion");
-        const encargado = document.getElementById("encargado");
+        const input = document.getElementById("producto");
+        const marca = document.getElementById("marca");
+        const unidad = document.getElementById("unidad");
+        const precio = document.getElementById("precio");
         const fecha = document.getElementById("fecha");
         const lista = document.getElementById("lista");
         
@@ -46,6 +58,58 @@
         async function cargar() {
             try {
                 const res = await fetch(API);
+                if (!res.ok) {
+                    const mensaje = await res.text();
+                    alert(mensaje || "Error al cargar las tareas");
+                    return;
+                }
+
+                const data = await res.json();
+                lista.innerHTML = "";
+                data.forEach(t => {
+                    // Se agrega el botón "Eliminar" en cada fila usando el ID del producto
+                    lista.innerHTML += `
+                        <tr>
+                            <td>${t.producto}</td>
+                            <td>${t.marca}</td>
+                            <td>${t.unidad}</td>
+                            td>${t.precio}</td>
+                            <td>${formatearFecha(t.fecha)}</td>
+                            <td>
+                                <button onclick="borrarUno(${t.id})" style="color: red; cursor: pointer;">
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+            } catch (error) {
+                alert("No se pudo conectar con el servidor");
+                console.error(error);
+            }
+        }
+
+        // --- NUEVA FUNCIÓN PARA BORRAR UN SOLO PRODUCTO ---
+        async function borrarUno(id) {
+            if (!confirm("¿Deseas eliminar este producto específico?")) return;
+
+            try {
+                const res = await fetch(`${API}/${id}`, {
+                    method: "DELETE"
+                });
+
+                if (res.ok) {
+                    cargar(); // Recargamos la tabla
+                } else {
+                    alert("Error al eliminar el producto");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        async function cargar() {
+            try {
+                const res = await fetch(API);
 
                 if (!res.ok) {
                     const mensaje = await res.text();
@@ -56,7 +120,7 @@
                 const data = await res.json();
                 lista.innerHTML = "";
                 data.forEach(t => {
-                    lista.innerHTML += `<tr><td>${t.descripcion}</td><td>${t.encargado}</td><td>${formatearFecha(t.fecha)}</td></tr>`;
+                    lista.innerHTML += `<tr><td>${t.producto}</td><td>${t.marca}</td><td>${t.unidad}</td><td>${t.precio}</td><td>${formatearFecha(t.fecha)}</td><td><button onclick="borrarUno(${t.id})" style="color: red; cursor: pointer;">Eliminar</button></td></tr>`;
                 });
             } catch (error) {
                 alert("No se pudo conectar con el servidor");
@@ -64,16 +128,39 @@
             }
         }
 
+        async function borrarTodo() {
+            if (!confirm("¿Estás seguro de que quieres borrar TODA la lista?")) return;
+
+            try {
+                const res = await fetch(API, {
+                    method: "DELETE"
+                });
+
+                if (!res.ok) {
+                    alert("Error al vaciar la lista");
+                    return;
+                }
+
+                alert("Lista vaciada");
+                cargar();
+            } catch (error) {
+                alert("No se pudo conectar con el servidor");
+                console.error(error);
+            }
+        }
+
         async function agregar() {
-            const descripcion = input.value.trim();
-            const encargadoValue = encargado.value.trim();
+            const producto = input.value.trim();
+            const marcaValue = marca.value.trim();
+            const unidadValue = document.getElementById("unidad").value.trim();
             const fechaValue = fecha.value;
+            const precioValue = precio.value.trim();
 
             try {
                 const res = await fetch(API, {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({ descripcion, fecha: fechaValue, encargado: encargadoValue })
+                    body: JSON.stringify({ producto, fecha: fechaValue, marca: marcaValue, unidad: unidadValue, precio: precioValue })
                 });
 
                 if (!res.ok) {
@@ -83,8 +170,10 @@
                 }
 
                 input.value = "";
+                marca.value = "";
+                document.getElementById("unidad").value = "";
                 fecha.value = "";
-                encargado.value = "";
+                precio.value = "";
                 cargar();
             } catch (error) {
                 alert("No se pudo conectar con el servidor");
