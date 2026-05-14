@@ -3,67 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <title>Mis Listas de Stock</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; display: flex; flex-direction: column; align-items: center; padding: 40px; }
-        h1 { color: #333; }
-        .grid-listas { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; width: 100%; max-width: 900px; margin-top: 30px; }
-        .card { 
-            background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
-        }
-        .card:hover { border-color: #2196F3; transform: translateY(-5px); }
-        .card h3 { margin: 0; color: #2196F3; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-nueva { background: #2196F3; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        .btn-nueva:hover { background: #1976D2; }
-        .btn-borrar {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #ff4d4d;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-        .btn-borrar:hover { background: #cc0000; }
-
-        .btn-nueva { background: #2196F3; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        .btn-nueva:hover { background: #1976D2; }
-    </style>
+     <link rel="stylesheet" href="/css/indexstyle.css">
 </head>
-<body>
+
+<body class="style">
 
     <h1>Gestor de Inventarios</h1>
     <button class="btn-nueva" onclick="crearNuevaLista()">+ Crear Nueva Lista</button>
 
     <div id="contenedor-listas" class="grid-listas">
+       
         <!-- Las listas aparecerán aquí -->
     </div>
 
     <script>
+        const API = "http://localhost:3000/stock";
+
         // Obtenemos las listas guardadas por el usuario (o vacío si es la primera vez)
         let listas = JSON.parse(localStorage.getItem('nombres_tablas')) || [];
 
-        function renderizar() {
+        async function obtenerResumenPorCategoria() {
+            try {
+                const res = await fetch(API);
+                if (!res.ok) return {};
+
+                const productos = await res.json();
+                const resumen = {};
+
+                productos.forEach((item) => {
+                    if (!item.categoria) return;
+
+                    if (!resumen[item.categoria]) {
+                        resumen[item.categoria] = {
+                            total: 0,
+                            productos: []
+                        };
+                    }
+
+                    resumen[item.categoria].total += 1;
+                    if (
+                        item.producto &&
+                        resumen[item.categoria].productos.length < 3 &&
+                        !resumen[item.categoria].productos.includes(item.producto)
+                    ) {
+                        resumen[item.categoria].productos.push(item.producto);
+                    }
+                });
+
+                return resumen;
+            } catch (error) {
+                console.error("Error al obtener resumen:", error);
+                return {};
+            }
+        }
+
+        async function renderizar() {
             const contenedor = document.getElementById('contenedor-listas');
             contenedor.innerHTML = "";
+            const resumen = await obtenerResumenPorCategoria();
             
             if (listas.length === 0) {
                 contenedor.innerHTML = "<p>No tienes listas creadas. ¡Empieza por crear una!</p>";
             }
             listas.forEach((nombre, index) => {
+                const datos = resumen[nombre] || { total: 0, productos: [] };
+                const preview = datos.productos.length
+                    ? datos.productos.join(", ")
+                    : "Sin productos todavía";
+
                 contenedor.innerHTML += `
                     <div class="card" onclick="abrirLista('${nombre}')">
                         <button class="btn-borrar" onclick="eliminarLista(event, '${nombre}', ${index})">×</button>
                         <h3>${nombre}</h3>
-                        <p style="color: #666; font-size: 14px; margin-top: 10px;">Click para gestionar stock</p>
+                        <p style="color: #666; font-size: 14px; margin-top: 10px;">${datos.total} producto(s)</p>
+                        <p style="color: #666; font-size: 13px; margin-top: 6px;">${preview}</p>
                     </div>
                 `;
             });
@@ -91,13 +104,13 @@
             if (confirmar) {
                 try {
                     // 1. Borrar los productos de esa categoría en la DB
-                    const res = await fetch(`${API}?categoria=${nombre}`, {
+                    const res = await fetch(`${API}?categoria=${encodeURIComponent(nombre)}`, {
                         method: "DELETE"
                     });
 
                     if (res.ok) {
                         // 2. Borrar del localStorage y del array
-                        listas.splice(index.html, 1);
+                        listas.splice(index, 1);
                         guardarListas();
                         renderizar();
                     } else {

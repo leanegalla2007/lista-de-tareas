@@ -1,0 +1,76 @@
+body { 
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f4f9; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    padding: 20px; }
+
+form { 
+    background: white; 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    margin-bottom: 20px; 
+    display: flex; 
+    gap: 10px; 
+    flex-wrap: wrap; 
+    justify-content: center; }
+
+input { 
+    padding: 8px; 
+    border: 1px solid #ccc; 
+    border-radius: 4px; }
+
+table {
+    width: 90%; 
+    max-width: 1000px; 
+    border-collapse: collapse; 
+    background: white; 
+    border-radius: 8px; 
+    overflow: hidden; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+       
+th, td { 
+     padding: 12px; 
+     text-align: left; 
+     border-bottom: 1px solid #eee; }
+        
+th { 
+    background-color: #2196F3; 
+    color: white; }
+
+.header-container { 
+    display: flex; 
+    justify-content: space-between; 
+    width: 90%; 
+    max-width: 1000px; 
+    align-items: center; }
+
+.btn-edit { 
+    color: #2196F3; 
+    cursor: pointer; 
+    margin-right: 10px; 
+    background: none; 
+    border: none; 
+    font-weight: bold; }
+
+.btn-delete { 
+    color: #ff4d4d; 
+    cursor: pointer; 
+    background: none; 
+    border: none; 
+    font-weight: bold; }
+
+.btn-save { 
+    color: #4CAF50; 
+    cursor: pointer; 
+    background: none; 
+    border: none; 
+    font-weight: bold; }
+
+.back-link { 
+    text-decoration: none; 
+    color: #2196F3; 
+    font-weight: bold; 
+    margin-bottom: 20px; }
