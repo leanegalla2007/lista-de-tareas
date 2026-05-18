@@ -126,6 +126,60 @@ app.delete("/stock", (req, res) => {
   });
 });
 
+
+// RUTA PARA REGISTRAR UN USUARIO NUEVO
+app.post("/registrar", (req, res) => {
+  const { usuario, password } = req.body;
+
+  if (!usuario || !password) {
+    return res.status(400).send("Usuario y contraseña son obligatorios.");
+  }
+
+  // Insertamos el usuario en la tabla de MySQL
+  db.query(
+    "INSERT INTO usuarios (usuario, password) VALUES (?, ?)",
+    [usuario, password],
+    (err, result) => {
+      if (err) {
+        // El código de error 1062 en MySQL significa que el valor UNIQUE ya existe (usuario duplicado)
+        if (err.errno === 1062) {
+          return res.status(400).send("El nombre de usuario ya está en uso.");
+        }
+        console.error(err);
+        return res.status(500).send("Error al registrar el usuario.");
+      }
+      res.send("Usuario registrado con éxito.");
+    }
+  );
+});
+
+// RUTA PARA INICIAR SESIÓN (LOGIN)
+app.post("/login", (req, res) => {
+  const { usuario, password } = req.body;
+
+  // Buscamos si existe un usuario con ese nombre exacto
+  db.query(
+    "SELECT * FROM usuarios WHERE usuario = ?",
+    [usuario],
+    (err, results) => {
+      if (err) return res.status(500).send("Error en el servidor.");
+      
+      // Si el array results está vacío, significa que el usuario no existe
+      if (results.length === 0) {
+        return res.status(401).send("Usuario o contraseña incorrectos.");
+      }
+
+      const usuarioEncontrado = results[0];
+
+      // Comparamos la contraseña enviada con la de la base de datos
+      if (usuarioEncontrado.password === password) {
+        res.send("Ingreso exitoso");
+      } else {
+        res.status(401).send("Usuario o contraseña incorrectos.");
+      }
+    }
+  );
+});
 // Es mejor poner los archivos estáticos antes o después de las rutas, 
 // pero asegúrate de que el puerto esté bien definido.
 app.use(express.static('public')); 

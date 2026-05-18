@@ -7,8 +7,15 @@
 </head>
 <body>
 
+    <nav class="navbar">
+        <div>
+            <strong>Gestor de Inventarios</strong>
+        </div>
+        <div id="usuario-navbar" class="usuario-navbar"></div>
+    </nav>
+
     <div class="header-container">
-        <a href="index.html" class="back-link">← Volver a mis listas</a>
+        <a href="list.html" class="back-link">← Volver a mis listas</a>
         <h1 id="titulo-lista">Cargando...</h1>
     </div>
 
@@ -19,7 +26,7 @@
         <input id="precio" type="number" placeholder="Precio x unidad" step="0.01">
         <input id="fecha" type="date">
         <input id="categoria" placeholder="Categoría" readonly>
-        <button type="submit" style="background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Agregar</button>
+        <button class="agregar" type="submit">Agregar</button>
     </form>
 
     <table>
@@ -40,8 +47,31 @@
     <script>
         const API = "http://localhost:3000/stock";
         const listaActiva = localStorage.getItem('lista_activa');
+        const formulario = document.getElementById("formulario");
+        const botonAgregar = formulario.querySelector(".agregar");
+        let enviandoProducto = false;
+
         document.getElementById('titulo-lista').innerText = "Stock: " + listaActiva;
         document.getElementById('categoria').value = listaActiva || "";
+
+        function renderNavbar() {
+            const usuario = localStorage.getItem('usuario_logueado');
+            const contenedor = document.getElementById('usuario-navbar');
+
+            if (usuario) {
+                contenedor.innerHTML = `
+                    <span>Usuario: <strong>${usuario}</strong></span>
+                    <button type="button" class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+                `;
+            } else {
+                contenedor.innerHTML = '<span>Sesión no iniciada</span>';
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('usuario_logueado');
+            renderNavbar();
+        }
 
         // Cargar productos filtrados por categoría
         async function cargar() {
@@ -111,39 +141,56 @@
         }
 
         // Agregar nuevo producto con categoría
-        document.getElementById("formulario").addEventListener("submit", async (e) => {
+        formulario.addEventListener("submit", async (e) => {
             e.preventDefault();
+
+            if (enviandoProducto) {
+                return;
+            }
+
+            enviandoProducto = true;
+            botonAgregar.disabled = true;
+            botonAgregar.textContent = "Agregando...";
 
             if (!listaActiva) {
                 alert("No hay lista activa seleccionada.");
+                enviandoProducto = false;
+                botonAgregar.disabled = false;
+                botonAgregar.textContent = "Agregar";
                 return;
             }
 
-            const nuevo = {
-                producto: document.getElementById("producto").value,
-                marca: document.getElementById("marca").value,
-                unidad: document.getElementById("unidad").value,
-                precio: document.getElementById("precio").value,
-                // Siempre se guarda en la categoría de la lista activa para no mezclar datos.
-                categoria: listaActiva,
-                fecha: document.getElementById("fecha").value
-            };
+            try {
+                const nuevo = {
+                    producto: document.getElementById("producto").value,
+                    marca: document.getElementById("marca").value,
+                    unidad: document.getElementById("unidad").value,
+                    precio: document.getElementById("precio").value,
+                    // Siempre se guarda en la categoría de la lista activa para no mezclar datos.
+                    categoria: listaActiva,
+                    fecha: document.getElementById("fecha").value
+                };
 
-            const res = await fetch(API, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(nuevo)
-            });
+                const res = await fetch(API, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(nuevo)
+                });
 
-            if (!res.ok) {
-                const mensaje = await res.text();
-                alert(mensaje || "No se pudo guardar el producto");
-                return;
+                if (!res.ok) {
+                    const mensaje = await res.text();
+                    alert(mensaje || "No se pudo guardar el producto");
+                    return;
+                }
+                
+                formulario.reset();
+                document.getElementById('categoria').value = listaActiva || "";
+                cargar();
+            } finally {
+                enviandoProducto = false;
+                botonAgregar.disabled = false;
+                botonAgregar.textContent = "Agregar";
             }
-            
-            e.target.reset();
-            document.getElementById('categoria').value = listaActiva || "";
-            cargar();
         });
 
         async function borrarUno(id) {
@@ -153,6 +200,7 @@
             }
         }
 
+        renderNavbar();
         cargar();
     </script>
 </body>

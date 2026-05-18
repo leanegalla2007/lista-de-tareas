@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mis Listas de Stock</title>
+     <link rel="stylesheet" href="/css/liststyle.css">
+</head>
+
+<body class="style">
+
+    <nav class="navbar">
+        <div>
+            <strong>Gestor de Inventarios</strong>
+        </div>
+        <div id="usuario-navbar" class="usuario-navbar"></div>
+    </nav>
+
+    <h1>Gestor de Inventarios</h1>
+    <button class="btn-nueva" onclick="crearNuevaLista()">+ Crear Nueva Lista</button>
+
+    <div id="contenedor-listas" class="grid-listas">
+       
+        <!-- Las listas aparecerán aquí -->
+    </div>
+
+    <script>
+        const API = "http://localhost:3000/stock";
+
+        // Obtenemos las listas guardadas por el usuario (o vacío si es la primera vez)
+        let listas = JSON.parse(localStorage.getItem('nombres_tablas')) || [];
+
+        function renderNavbar() {
+            const usuario = localStorage.getItem('usuario_logueado');
+            const contenedor = document.getElementById('usuario-navbar');
+
+            if (usuario) {
+                contenedor.innerHTML = `
+                    <span>Usuario: <strong>${usuario}</strong></span>
+                    <button type="button" class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+                `;
+            } else {
+                contenedor.innerHTML = '<span>Sesión no iniciada</span>';
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('usuario_logueado');
+            renderNavbar();
+        }
+
+        async function obtenerResumenPorCategoria() {
+            try {
+                const res = await fetch(API);
+                if (!res.ok) return {};
+
+                const productos = await res.json();
+                const resumen = {};
+
+                productos.forEach((item) => {
+                    if (!item.categoria) return;
+
+                    if (!resumen[item.categoria]) {
+                        resumen[item.categoria] = {
+                            total: 0,
+                            productos: []
+                        };
+                    }
+
+                    resumen[item.categoria].total += 1;
+                    if (
+                        item.producto &&
+                        resumen[item.categoria].productos.length < 3 &&
+                        !resumen[item.categoria].productos.includes(item.producto)
+                    ) {
+                        resumen[item.categoria].productos.push(item.producto);
+                    }
+                });
+
+                return resumen;
+            } catch (error) {
+                console.error("Error al obtener resumen:", error);
+                return {};
+            }
+        }
+
+        async function renderizar() {
+            const contenedor = document.getElementById('contenedor-listas');
+            contenedor.innerHTML = "";
+            const resumen = await obtenerResumenPorCategoria();
+            
+            if (listas.length === 0) {
+                contenedor.innerHTML = "<p>No tienes listas creadas. ¡Empieza por crear una!</p>";
+            }
+            listas.forEach((nombre, index) => {
+                const datos = resumen[nombre] || { total: 0, productos: [] };
+                const preview = datos.productos.length
+                    ? datos.productos.join(", ")
+                    : "Sin productos todavía";
+
+                contenedor.innerHTML += `
+                    <div class="card" onclick="abrirLista('${nombre}')">
+                        <button class="btn-borrar" onclick="eliminarLista(event, '${nombre}', ${index})">x</button>
+                        <h3>${nombre}</h3>
+                        <p">${datos.total} producto(s)</p>
+                        <p">${preview}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function crearNuevaLista() {
+    const nombre = prompt("¿Qué nombre le quieres poner a la nueva lista?");
+    
+    // Si el usuario cancela o deja vacío, no hacemos nada
+    if (!nombre || nombre.trim() === "") return;
+
+    const nombreLimpio = nombre.trim();
+    const limiteLetras = 30; // <--- Define aquí el máximo de caracteres permitido
+
+    // 1. Validación de longitud
+    if (nombreLimpio.length > limiteLetras) {
+        alert(`El nombre es muy largo. El máximo permitido son ${limiteLetras} caracteres (escribiste ${nombreLimpio.length}).`);
+        return; // Detiene la ejecución aquí
+    }
+
+    // 2. Validación de duplicados (Evita "Bebidas" y "bebidas" al mismo tiempo)
+    const nombreNormalizado = nombreLimpio.toLowerCase();
+    const existeDuplicado = listas.map(l => l.toLowerCase()).includes(nombreNormalizado);
+
+    if (!existeDuplicado) {
+        listas.push(nombreLimpio);
+        localStorage.setItem('nombres_tablas', JSON.stringify(listas));
+        renderizar();
+    } else {
+        alert("Ya existe una lista con ese nombre.");
+    }
+}
+
+        async function eliminarLista(event, nombre, index) {
+            // EVITA que al hacer clic en la X se abra la lista
+            event.stopPropagation();
+
+            const confirmar = confirm(`¿Estás seguro de borrar la lista "${nombre}"?\nEsto también eliminará todos sus productos de la base de datos.`);
+            
+            if (confirmar) {
+                try {
+                    // 1. Borrar los productos de esa categoría en la DB
+                    const res = await fetch(`${API}?categoria=${encodeURIComponent(nombre)}`, {
+                        method: "DELETE"
+                    });
+
+                    if (res.ok) {
+                        // 2. Borrar del localStorage y del array
+                        listas.splice(index, 1);
+                        guardarListas();
+                        renderizar();
+                    } else {
+                        alert("Error al borrar los datos del servidor.");
+                    }
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("No se pudo conectar con el servidor.");
+                }
+            }
+        }
+        
+        function guardarListas() {
+            localStorage.setItem('nombres_tablas', JSON.stringify(listas));
+        }
+
+        function abrirLista(nombre) {
+            localStorage.setItem('lista_activa', nombre);
+            window.location.href = "table.html";
+        }
+
+        renderNavbar();
+        renderizar();
+    </script>
+</body>
+</html>

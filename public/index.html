@@ -2,137 +2,133 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mis Listas de Stock</title>
-     <link rel="stylesheet" href="/css/indexstyle.css">
+    <title>Ingreso al Sistema</title>
+    <link rel="stylesheet" href="/css/indexstyle.css"> <!-- Reutiliza tus estilos -->
 </head>
-
 <body class="style">
 
-    <h1>Gestor de Inventarios</h1>
-    <button class="btn-nueva" onclick="crearNuevaLista()">+ Crear Nueva Lista</button>
+    <nav class="navbar">
+        <div>
+            <strong>Gestor de Inventarios</strong>
+        </div>
+        <div id="usuario-navbar" class="usuario-navbar"></div>
+    </nav>
 
-    <div id="contenedor-listas" class="grid-listas">
-       
-        <!-- Las listas aparecerán aquí -->
+    <div class="auth-container">
+        <div class="tabs">
+            <button id="btn-tab-login" class="tab-btn active" onclick="cambiarTab('login')">Iniciar Sesión</button>
+            <button id="btn-tab-registro" class="tab-btn" onclick="cambiarTab('registro')">Registrarse</button>
+        </div>
+
+        <!-- FORMULARIO DE LOGIN -->
+        <form id="form-login">
+            <h2>Ingresar</h2>
+            <div class="form-group">
+                <input type="text" id="user-login" placeholder="Usuario" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="pass-login" placeholder="Contraseña" required>
+            </div>
+            <button class="iniciarsesion" type="submit">Entrar</button>
+        </form>
+
+        <!-- FORMULARIO DE REGISTRO -->
+        <form id="form-registro" class="oculto">
+            <h2>Crear Cuenta</h2>
+            <div class="form-group">
+                <input type="text" id="user-reg" placeholder="Escribe un usuario" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="pass-reg" placeholder="Escribe una contraseña" required>
+            </div>
+            <button type="submit" class="registrar">Registrarme</button>
+        </form>
     </div>
 
     <script>
-        const API = "http://localhost:3000/stock";
+        const API_AUTH = "http://localhost:3000";
 
-        // Obtenemos las listas guardadas por el usuario (o vacío si es la primera vez)
-        let listas = JSON.parse(localStorage.getItem('nombres_tablas')) || [];
+        function renderNavbar() {
+            const usuario = localStorage.getItem('usuario_logueado');
+            const contenedor = document.getElementById('usuario-navbar');
 
-        async function obtenerResumenPorCategoria() {
-            try {
-                const res = await fetch(API);
-                if (!res.ok) return {};
-
-                const productos = await res.json();
-                const resumen = {};
-
-                productos.forEach((item) => {
-                    if (!item.categoria) return;
-
-                    if (!resumen[item.categoria]) {
-                        resumen[item.categoria] = {
-                            total: 0,
-                            productos: []
-                        };
-                    }
-
-                    resumen[item.categoria].total += 1;
-                    if (
-                        item.producto &&
-                        resumen[item.categoria].productos.length < 3 &&
-                        !resumen[item.categoria].productos.includes(item.producto)
-                    ) {
-                        resumen[item.categoria].productos.push(item.producto);
-                    }
-                });
-
-                return resumen;
-            } catch (error) {
-                console.error("Error al obtener resumen:", error);
-                return {};
-            }
-        }
-
-        async function renderizar() {
-            const contenedor = document.getElementById('contenedor-listas');
-            contenedor.innerHTML = "";
-            const resumen = await obtenerResumenPorCategoria();
-            
-            if (listas.length === 0) {
-                contenedor.innerHTML = "<p>No tienes listas creadas. ¡Empieza por crear una!</p>";
-            }
-            listas.forEach((nombre, index) => {
-                const datos = resumen[nombre] || { total: 0, productos: [] };
-                const preview = datos.productos.length
-                    ? datos.productos.join(", ")
-                    : "Sin productos todavía";
-
-                contenedor.innerHTML += `
-                    <div class="card" onclick="abrirLista('${nombre}')">
-                        <button class="btn-borrar" onclick="eliminarLista(event, '${nombre}', ${index})">×</button>
-                        <h3>${nombre}</h3>
-                        <p style="color: #666; font-size: 14px; margin-top: 10px;">${datos.total} producto(s)</p>
-                        <p style="color: #666; font-size: 13px; margin-top: 6px;">${preview}</p>
-                    </div>
+            if (usuario) {
+                contenedor.innerHTML = `
+                    <span>Usuario: <strong>${usuario}</strong></span>
+                    <button type="button" class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
                 `;
+            } else {
+                contenedor.innerHTML = '<span>Sesión no iniciada</span>';
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('usuario_logueado');
+            renderNavbar();
+        }
+
+        // Alternar entre pestañas de Login y Registro
+        function cambiarTab(tipo) {
+            if (tipo === 'login') {
+                document.getElementById('form-login').classList.remove('oculto');
+                document.getElementById('form-registro').classList.add('oculto');
+                document.getElementById('btn-tab-login').classList.add('active');
+                document.getElementById('btn-tab-registro').classList.remove('active');
+            } else {
+                document.getElementById('form-login').classList.add('oculto');
+                document.getElementById('form-registro').classList.remove('oculto');
+                document.getElementById('btn-tab-login').classList.remove('active');
+                document.getElementById('btn-tab-registro').classList.add('active');
+            }
+        }
+
+        // Lógica de Registro
+        document.getElementById('form-registro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const usuario = document.getElementById('user-reg').value;
+            const password = document.getElementById('pass-reg').value;
+
+            const res = await fetch(`${API_AUTH}/registrar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, password })
             });
-        }
 
-        function crearNuevaLista() {
-            const nombre = prompt("¿Qué nombre le quieres poner a la nueva lista?");
-            if (nombre && nombre.trim() !== "") {
-                if (!listas.includes(nombre.trim())) {
-                    listas.push(nombre.trim());
-                    localStorage.setItem('nombres_tablas', JSON.stringify(listas));
-                    renderizar();
-                } else {
-                    alert("Ya existe una lista con ese nombre.");
-                }
+            const mensaje = await res.text();
+            alert(mensaje);
+            if (res.ok) {
+                localStorage.setItem('usuario_logueado', usuario);
+                e.target.reset();
+                renderNavbar();
+                cambiarTab('login'); // Lo manda a loguearse tras registrarse
             }
-        }
+        });
 
-        async function eliminarLista(event, nombre, index) {
-            // EVITA que al hacer clic en la X se abra la lista
-            event.stopPropagation();
+        // Lógica de Login
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const usuario = document.getElementById('user-login').value;
+            const password = document.getElementById('pass-login').value;
 
-            const confirmar = confirm(`¿Estás seguro de borrar la lista "${nombre}"?\nEsto también eliminará todos sus productos de la base de datos.`);
-            
-            if (confirmar) {
-                try {
-                    // 1. Borrar los productos de esa categoría en la DB
-                    const res = await fetch(`${API}?categoria=${encodeURIComponent(nombre)}`, {
-                        method: "DELETE"
-                    });
+            const res = await fetch(`${API_AUTH}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, password })
+            });
 
-                    if (res.ok) {
-                        // 2. Borrar del localStorage y del array
-                        listas.splice(index, 1);
-                        guardarListas();
-                        renderizar();
-                    } else {
-                        alert("Error al borrar los datos del servidor.");
-                    }
-                } catch (error) {
-                    console.error("Error:", error);
-                    alert("No se pudo conectar con el servidor.");
-                }
+            if (res.ok) {
+                alert("¡Bienvenido al sistema!");
+                // Guardamos en localStorage que el usuario inició sesión
+                localStorage.setItem('usuario_logueado', usuario);
+                renderNavbar();
+                window.location.href = "list.html"; // Redirige al panel principal
+            } else {
+                const error = await res.text();
+                alert(error);
             }
-        }
-        
-        function guardarListas() {
-            localStorage.setItem('nombres_tablas', JSON.stringify(listas));
-        }
+        });
 
-        function abrirLista(nombre) {
-            localStorage.setItem('lista_activa', nombre);
-            window.location.href = "table.html";
-        }
-
-        renderizar();
+        renderNavbar();
     </script>
 </body>
 </html>
