@@ -48,6 +48,8 @@
     <script>
         const API_AUTH = "http://localhost:3000";
 
+        // let.cuentas = JSON.parse(localStorage.getItem('cuentas')) || {};
+
         function renderNavbar() {
             const usuario = localStorage.getItem('usuario_logueado');
             const contenedor = document.getElementById('usuario-navbar');
@@ -64,6 +66,7 @@
 
         function cerrarSesion() {
             localStorage.removeItem('usuario_logueado');
+            window.location.href = "index.html";
             renderNavbar();
         }
 

@@ -19,23 +19,28 @@
     <button class="btn-nueva" onclick="crearNuevaLista()">+ Crear Nueva Lista</button>
 
     <div id="contenedor-listas" class="grid-listas">
-       
         <!-- Las listas aparecerán aquí -->
     </div>
 
     <script>
         const API = "http://localhost:3000/stock";
 
-        // Obtenemos las listas guardadas por el usuario (o vacío si es la primera vez)
-        let listas = JSON.parse(localStorage.getItem('nombres_tablas')) || [];
+        // 1. CONTROL DE ACCESO: Obtener el usuario logueado y validar que exista
+        const usuarioLogueado = localStorage.getItem('usuario_logueado');
+        if (!usuarioLogueado) {
+            alert("Debes iniciar sesión para acceder a tus listas.");
+            window.location.href = "index.html"; // Ajusta a auth.html si tu login está allí
+        }
+
+        // 2. LLAVE ÚNICA: Creamos un almacén de listas exclusivo para este usuario
+        const claveListas = `nombres_tablas_${usuarioLogueado}`;
+        let listas = JSON.parse(localStorage.getItem(claveListas)) || [];
 
         function renderNavbar() {
-            const usuario = localStorage.getItem('usuario_logueado');
             const contenedor = document.getElementById('usuario-navbar');
-
-            if (usuario) {
+            if (usuarioLogueado) {
                 contenedor.innerHTML = `
-                    <span>Usuario: <strong>${usuario}</strong></span>
+                    <span>Usuario: <strong>${usuarioLogueado}</strong></span>
                     <button type="button" class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
                 `;
             } else {
@@ -45,12 +50,18 @@
 
         function cerrarSesion() {
             localStorage.removeItem('usuario_logueado');
-            renderNavbar();
+            window.location.href = "index.html"; 
         }
 
+        // 3. ENVIAR CABECERA: Modificado para enviar 'X-Usuario' al backend
         async function obtenerResumenPorCategoria() {
             try {
-                const res = await fetch(API);
+                const res = await fetch(API, {
+                    method: "GET",
+                    headers: {
+                        "X-Usuario": usuarioLogueado // Le dice al backend de quién buscar los productos
+                    }
+                });
                 if (!res.ok) return {};
 
                 const productos = await res.json();
@@ -101,56 +112,54 @@
                     <div class="card" onclick="abrirLista('${nombre}')">
                         <button class="btn-borrar" onclick="eliminarLista(event, '${nombre}', ${index})">x</button>
                         <h3>${nombre}</h3>
-                        <p">${datos.total} producto(s)</p>
-                        <p">${preview}</p>
+                        <p>${datos.total} producto(s)</p>
+                        <p>${preview}</p>
                     </div>
                 `;
             });
         }
 
         function crearNuevaLista() {
-    const nombre = prompt("¿Qué nombre le quieres poner a la nueva lista?");
-    
-    // Si el usuario cancela o deja vacío, no hacemos nada
-    if (!nombre || nombre.trim() === "") return;
+            const nombre = prompt("¿Qué nombre le quieres poner a la nueva lista?");
+            
+            if (!nombre || nombre.trim() === "") return;
 
-    const nombreLimpio = nombre.trim();
-    const limiteLetras = 30; // <--- Define aquí el máximo de caracteres permitido
+            const nombreLimpio = nombre.trim();
+            const limiteLetras = 30;
 
-    // 1. Validación de longitud
-    if (nombreLimpio.length > limiteLetras) {
-        alert(`El nombre es muy largo. El máximo permitido son ${limiteLetras} caracteres (escribiste ${nombreLimpio.length}).`);
-        return; // Detiene la ejecución aquí
-    }
+            if (nombreLimpio.length > limiteLetras) {
+                alert(`El nombre es muy largo. El máximo permitido son ${limiteLetras} caracteres.`);
+                return;
+            }
 
-    // 2. Validación de duplicados (Evita "Bebidas" y "bebidas" al mismo tiempo)
-    const nombreNormalizado = nombreLimpio.toLowerCase();
-    const existeDuplicado = listas.map(l => l.toLowerCase()).includes(nombreNormalizado);
+            const nombreNormalizado = nombreLimpio.toLowerCase();
+            const existeDuplicado = listas.map(l => l.toLowerCase()).includes(nombreNormalizado);
 
-    if (!existeDuplicado) {
-        listas.push(nombreLimpio);
-        localStorage.setItem('nombres_tablas', JSON.stringify(listas));
-        renderizar();
-    } else {
-        alert("Ya existe una lista con ese nombre.");
-    }
-}
+            if (!existeDuplicado) {
+                listas.push(nombreLimpio);
+                guardarListas(); // Usa la nueva función con clave personalizada
+                renderizar();
+            } else {
+                alert("Ya existe una lista con ese nombre.");
+            }
+        }
 
+        // 4. ELIMINAR CON IDENTIDAD: Envía la cabecera al borrar para no afectar a otros usuarios
         async function eliminarLista(event, nombre, index) {
-            // EVITA que al hacer clic en la X se abra la lista
             event.stopPropagation();
 
-            const confirmar = confirm(`¿Estás seguro de borrar la lista "${nombre}"?\nEsto también eliminará todos sus productos de la base de datos.`);
+            const confirmar = confirm(`¿Estás seguro de borrar la lista "${nombre}"?\nEsto también eliminará todos tus productos de esa categoría.`);
             
             if (confirmar) {
                 try {
-                    // 1. Borrar los productos de esa categoría en la DB
                     const res = await fetch(`${API}?categoria=${encodeURIComponent(nombre)}`, {
-                        method: "DELETE"
+                        method: "DELETE",
+                        headers: {
+                            "X-Usuario": usuarioLogueado // El servidor borrará solo tus productos de esta lista
+                        }
                     });
 
                     if (res.ok) {
-                        // 2. Borrar del localStorage y del array
                         listas.splice(index, 1);
                         guardarListas();
                         renderizar();
@@ -164,8 +173,9 @@
             }
         }
         
+        // Guarda en el almacén exclusivo del usuario activo
         function guardarListas() {
-            localStorage.setItem('nombres_tablas', JSON.stringify(listas));
+            localStorage.setItem(claveListas, JSON.stringify(listas));
         }
 
         function abrirLista(nombre) {

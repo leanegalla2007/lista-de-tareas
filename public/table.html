@@ -54,7 +54,9 @@
         document.getElementById('titulo-lista').innerText = "Stock: " + listaActiva;
         document.getElementById('categoria').value = listaActiva || "";
 
-        function renderNavbar() {
+        function renderNavbar() 
+        { 
+            
             const usuario = localStorage.getItem('usuario_logueado');
             const contenedor = document.getElementById('usuario-navbar');
 
@@ -65,7 +67,12 @@
                 `;
             } else {
                 contenedor.innerHTML = '<span>Sesión no iniciada</span>';
-            }
+             // Redirigir al login si no hay sesióni=f 
+                (!usuario) 
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 2000);
+                }
         }
 
         function cerrarSesion() {
