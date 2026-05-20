@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Gestión de Stock</title>
     <link rel="stylesheet" href="/css/tablestyle.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 </head>
 <body>
 
@@ -29,6 +30,11 @@
         <button class="agregar" type="submit">Agregar</button>
     </form>
 
+    <!-- SECCIÓN DEL BUSCADOR -->
+    <div class="search-container my-3" style="max-width: 400px; margin: 0 auto;">
+        <input type="text" id="buscador" class="form-control" placeholder="🔍 Buscar producto o marca...">
+    </div>
+
     <table>
         <thead>
             <tr>
@@ -47,12 +53,12 @@
     <script>
         const API = "http://localhost:3000/stock";
         const listaActiva = localStorage.getItem('lista_activa');
-        const usuarioLogueado = localStorage.getItem('usuario_logueado'); // <--- Capturamos el usuario activo
+        const usuarioLogueado = localStorage.getItem('usuario_logueado');
         const formulario = document.getElementById("formulario");
         const botonAgregar = formulario.querySelector(".agregar");
+        const inputBuscador = document.getElementById("buscador"); // <-- Referencia al buscador
         let enviandoProducto = false;
 
-        // Redirección inmediata si intenta forzar la URL sin loguearse
         if (!usuarioLogueado) {
             alert("No autorizado, inicie sesión.");
             window.location.href = "index.html";
@@ -79,13 +85,13 @@
             window.location.href = "index.html";
         }
 
-        // Cargar productos filtrados por categoría y usuario
+        // Cargar productos
         async function cargar() {
             try {
                 const res = await fetch(`${API}?categoria=${listaActiva}`, {
                     method: "GET",
                     headers: {
-                        "X-Usuario": usuarioLogueado // <--- Cabecera añadida
+                        "X-Usuario": usuarioLogueado
                     }
                 });
                 const data = await res.json();
@@ -94,11 +100,11 @@
 
                 data.forEach(t => {
                     cuerpo.innerHTML += `
-                        <tr id="fila-${t.id}">
-                            <td><span class="dato">${t.producto}</span></td>
-                            <td><span class="dato">${t.marca}</span></td>
-                            <td><span class="dato">${t.unidad}</span></td>
-                            <td>$<span class="dato">${t.precio}</span></td>
+                        <tr id="fila-${t.id}" class="fila-producto">
+                            <td><span class="dato dato-producto">${t.producto}</span></td>
+                            <td><span class="dato dato-marca">${t.marca || ''}</span></td>
+                            <td><span class="dato">${t.unidad || ''}</span></td>
+                            <td>$<span class="dato">${t.precio || 0}</span></td>
                             <td><span class="dato">${t.fecha ? t.fecha.split('T')[0] : ''}</span></td>
                             <td><span class="dato">${t.categoria}</span></td>
                             <td>
@@ -107,8 +113,33 @@
                             </td>
                         </tr>`;
                 });
+
+                // Si hay algo escrito previamente en el buscador al recargar, reaplica el filtro
+                filtrarProductos();
             } catch (e) { console.error("Error al cargar", e); }
         }
+
+        // FUNCIÓN DE FILTRADO EN TIEMPO REAL
+        function filtrarProductos() {
+            const termino = inputBuscador.value.toLowerCase().trim();
+            const filas = document.querySelectorAll(".fila-producto");
+
+            filas.forEach(fila => {
+                // Buscamos el texto del producto y de la marca dentro de esta fila
+                const textoProducto = fila.querySelector(".dato-producto").innerText.toLowerCase();
+                const textoMarca = fila.querySelector(".dato-marca").innerText.toLowerCase();
+
+                // Si el término coincide con el nombre o la marca, se muestra; si no, se oculta
+                if (textoProducto.includes(termino) || textoMarca.includes(termino)) {
+                    fila.style.display = ""; // Muestra la fila estándar
+                } else {
+                    fila.style.display = "none"; // Oculta la fila
+                }
+            });
+        }
+
+        // Escuchar el evento de escritura en el buscador
+        inputBuscador.addEventListener("input", filtrarProductos);
 
         // Activar campos de texto en la fila
         function activarEdicion(id) {
@@ -145,7 +176,7 @@
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-Usuario": usuarioLogueado // <--- Cabecera añadida
+                    "X-Usuario": usuarioLogueado
                 },
                 body: JSON.stringify(actualizado)
             });
@@ -186,7 +217,7 @@
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-Usuario": usuarioLogueado // <--- Cabecera añadida
+                        "X-Usuario": usuarioLogueado
                     },
                     body: JSON.stringify(nuevo)
                 });
@@ -213,7 +244,7 @@
                 const res = await fetch(`${API}/${id}`, { 
                     method: "DELETE",
                     headers: {
-                        "X-Usuario": usuarioLogueado // <--- Cabecera añadida
+                        "X-Usuario": usuarioLogueado
                     }
                 });
                 
@@ -225,5 +256,6 @@
         renderNavbar();
         cargar();
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 </body>
 </html>

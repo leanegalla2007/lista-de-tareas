@@ -3,7 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <title>Mis Listas de Stock</title>
-     <link rel="stylesheet" href="/css/liststyle.css">
+    <!-- 1. CSS de Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/liststyle.css">
+    <style>
+        /* Estilos añadidos inline para asegurar el comportamiento visual del Drag and Drop */
+        .card {
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:active {
+            cursor: grabbing;
+        }
+        /* Clase que se aplica a la tarjeta que se está arrastrando */
+        .card.dragging {
+            opacity: 0.5;
+            transform: scale(1.02);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+    </style>
 </head>
 
 <body class="style">
@@ -13,28 +32,99 @@
             <strong>Gestor de Inventarios</strong>
         </div>
         <div id="usuario-navbar" class="usuario-navbar"></div>
+        <button id="btn-admin-panel" class="btn btn-danger" style="display: none;" onclick="window.location.href='usuarios.html'">
+    ⚙️ Panel Admin (Usuarios)
+</button>
     </nav>
 
     <h1>Gestor de Inventarios</h1>
-    <button class="btn-nueva" onclick="crearNuevaLista()">+ Crear Nueva Lista</button>
+    
+    <button class="btn-nueva" data-bs-toggle="modal" data-bs-target="#modalNuevaLista">+ Crear Nueva Lista</button>
 
     <div id="contenedor-listas" class="grid-listas">
         <!-- Las listas aparecerán aquí -->
     </div>
 
+    <!-- Bootstrap -->
+    <!-- MODAL 1: CREAR NUEVA LISTA -->
+    <div class="modal fade" id="modalNuevaLista" tabindex="-1" aria-labelledby="modalNuevaListaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalNuevaListaLabel">Nueva lista de Stock</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nombreListaInput" class="form-label">¿Qué nombre le quieres poner a la nueva lista?</label>
+                        <input type="text" class="form-control" id="nombreListaInput" placeholder="Ej. Bebidas, Limpieza..." autocomplete="off">
+                        <div id="errorModal" class="text-danger small mt-2" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="procesarNuevaLista()">Crear Lista</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CONFIRMAR ELIMINACIÓN DE LISTA -->
+    <div class="modal fade" id="modalEliminarLista" tabindex="-1" aria-labelledby="modalEliminarListaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="modalEliminarListaLabel">¿Confirmar eliminación?</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas borrar la lista <strong id="nombreListaABorrar">""</strong>?</p>
+                    <p class="text-danger small mb-0"><strong>Advertencia:</strong> Esto también eliminará de forma permanente todos tus productos guardados en esta categoría dentro del servidor.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" onclick="confirmarEliminarLista()">Eliminar definitivamente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Fin de Bootstrap -->
+
+    <!-- JS de Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         const API = "http://localhost:3000/stock";
 
-        // 1. CONTROL DE ACCESO: Obtener el usuario logueado y validar que exista
+        // Instancias globales para controlar los modales desde JavaScript
+        const modalNuevaListaBS = new bootstrap.Modal(document.getElementById('modalNuevaLista'));
+        const modalEliminarListaBS = new bootstrap.Modal(document.getElementById('modalEliminarLista'));
+
+        // Variables temporales para recordar qué lista se quiere borrar entre clics
+        let listaSeleccionadaParaBorrar = { nombre: "", index: -1 };
+
         const usuarioLogueado = localStorage.getItem('usuario_logueado');
-        if (!usuarioLogueado) {
-            alert("Debes iniciar sesión para acceder a tus listas.");
-            window.location.href = "index.html"; // Ajusta a auth.html si tu login está allí
+        
+        // LÓGICA PARA MOSTRAR EL BOTÓN DE ADMIN
+        function verificarRolAdmin() {
+            const btnAdmin = document.getElementById('btn-admin-panel');
+            
+            // Si el usuario es "admin", hacemos visible el botón
+            // (Cambia "admin" por el nombre exacto de tu usuario administrador de pruebas si es diferente)
+            if (usuarioLogueado === 'admin' && btnAdmin) {
+                btnAdmin.style.display = 'inline-block';
+            }
         }
 
-        // 2. LLAVE ÚNICA: Creamos un almacén de listas exclusivo para este usuario
+        // Ejecuta la función al cargar la página
+        verificarRolAdmin()
+
+        if (!usuarioLogueado) {
+            alert("Debes iniciar sesión para acceder a tus listas.");
+            window.location.href = "index.html";
+        }
+
         const claveListas = `nombres_tablas_${usuarioLogueado}`;
         let listas = JSON.parse(localStorage.getItem(claveListas)) || [];
+        let seEstaArrastrando = false;
 
         function renderNavbar() {
             const contenedor = document.getElementById('usuario-navbar');
@@ -53,14 +143,11 @@
             window.location.href = "index.html"; 
         }
 
-        // 3. ENVIAR CABECERA: Modificado para enviar 'X-Usuario' al backend
         async function obtenerResumenPorCategoria() {
             try {
                 const res = await fetch(API, {
                     method: "GET",
-                    headers: {
-                        "X-Usuario": usuarioLogueado // Le dice al backend de quién buscar los productos
-                    }
+                    headers: { "X-Usuario": usuarioLogueado }
                 });
                 if (!res.ok) return {};
 
@@ -71,10 +158,7 @@
                     if (!item.categoria) return;
 
                     if (!resumen[item.categoria]) {
-                        resumen[item.categoria] = {
-                            total: 0,
-                            productos: []
-                        };
+                        resumen[item.categoria] = { total: 0, productos: [] };
                     }
 
                     resumen[item.categoria].total += 1;
@@ -101,34 +185,145 @@
             
             if (listas.length === 0) {
                 contenedor.innerHTML = "<p>No tienes listas creadas. ¡Empieza por crear una!</p>";
+                return;
             }
+            
             listas.forEach((nombre, index) => {
                 const datos = resumen[nombre] || { total: 0, productos: [] };
                 const preview = datos.productos.length
                     ? datos.productos.join(", ")
                     : "Sin productos todavía";
 
+                // Se añade el atributo draggable="true" y el dataset con el nombre de la lista
                 contenedor.innerHTML += `
-                    <div class="card" onclick="abrirLista('${nombre}')">
-                        <button class="btn-borrar" onclick="eliminarLista(event, '${nombre}', ${index})">x</button>
+                    <div class="card" draggable="true" data-nombre="${nombre}" onclick="abrirListaSiNoArrastre(event, '${nombre}')">
+                        <button class="btn-borrar" onclick="prepararEliminado(event, '${nombre}', ${index})">x</button>
                         <h3>${nombre}</h3>
                         <p>${datos.total} producto(s)</p>
                         <p>${preview}</p>
                     </div>
                 `;
             });
+
+            // Una vez añadidas las tarjetas al DOM, activamos los listeners para arrastrarlas
+            inicializarDragAndDrop();
         }
 
-        function crearNuevaLista() {
-            const nombre = prompt("¿Qué nombre le quieres poner a la nueva lista?");
+        // --- NUEVA SECCIÓN: LÓGICA DRAG AND DROP ---
+        function inicializarDragAndDrop() {
+            const contenedor = document.getElementById('contenedor-listas');
+            const tarjetas = contenedor.querySelectorAll('.card');
+
+            tarjetas.forEach(tarjeta => {
+                tarjeta.addEventListener('dragstart', (e) => {
+                    seEstaArrastrando = true;
+                    tarjeta.classList.add('dragging');
+                    // Compatibilidad con Firefox
+                    e.dataTransfer.setData('text/plain', ''); 
+                });
+
+                tarjeta.addEventListener('dragend', () => {
+                    tarjeta.classList.remove('dragging');
+                    recalcularNuevoOrden();
+
+                    // Evita abrir la tarjeta por el click residual justo al terminar de arrastrar
+                    setTimeout(() => {
+                        seEstaArrastrando = false;
+                    }, 0);
+                });
+            });
+
+            contenedor.ondragover = (e) => {
+                e.preventDefault(); // Permite soltar elementos dentro
+                const tarjetaArrastrada = document.querySelector('.dragging');
+                if (!tarjetaArrastrada) return;
+
+                const siguienteElemento = obtenerElementoDropPosicion(contenedor, e.clientX, e.clientY);
+                
+                if (siguienteElemento == null) {
+                    contenedor.appendChild(tarjetaArrastrada);
+                } else {
+                    contenedor.insertBefore(tarjetaArrastrada, siguienteElemento);
+                }
+            };
+        }
+
+        // Calcula dinámicamente qué tarjeta está más cerca del puntero del mouse
+        // Calcula dinámicamente qué tarjeta debe ser la "siguiente" según la posición del mouse
+// Calcula la posición reduciendo el parpadeo (flickering) mediante un umbral de tolerancia
+function obtenerElementoDropPosicion(contenedor, x, y) {
+    const tarjetasFijas = [...contenedor.querySelectorAll('.card:not(.dragging)')];
+    const tarjetaArrastrada = document.querySelector('.dragging');
+    
+    if (!tarjetaArrastrada) return null;
+
+    // Obtenemos el ancho de la tarjeta que llevas en la mano para calcular la tolerancia
+    const anchoTarjeta = tarjetaArrastrada.getBoundingClientRect().width;
+    const tolerancia = anchoTarjeta * 0.30; // 50% de margen de seguridad
+
+    return tarjetasFijas.find(hijo => {
+        const caja = hijo.getBoundingClientRect();
+        const centroX = caja.left + caja.width / 2;
+
+        // Averiguamos si la tarjeta fija está antes o después de la que estamos arrastrando en el DOM
+        const esAnterior = tarjetaArrastrada.compareDocumentPosition(hijo) & Node.DOCUMENT_POSITION_PRECEDING;
+
+        if (esAnterior) {
+            // Si nos movemos hacia la IZQUIERDA: el mouse debe superar el centro hacia la izquierda (+ tolerancia)
+            return x < (centroX - tolerancia);
+        } else {
+            // Si nos movemos hacia la DERECHA: el mouse debe superar el centro hacia la derecha (- tolerancia)
+            return x < (centroX + tolerancia);
+        }
+    });
+}
+
+
+        function abrirListaSiNoArrastre(event, nombre) {
+            if (seEstaArrastrando) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+
+            abrirLista(nombre);
+        }
+
+        // Lee el nuevo orden visual del DOM y actualiza el array en el LocalStorage
+        function recalcularNuevoOrden() {
+            const contenedor = document.getElementById('contenedor-listas');
+            const tarjetasActuales = [...contenedor.querySelectorAll('.card')];
             
-            if (!nombre || nombre.trim() === "") return;
+            // Reconstruimos el array basándonos en la posición física actual de los elementos
+            listas = tarjetasActuales.map(tarjeta => tarjeta.dataset.nombre);
+            
+            guardarListas();
+            
+            // Volvemos a renderizar para actualizar los índices de los botones de eliminado correctamente
+            renderizar();
+        }
+        // --- FIN SECCIÓN DRAG AND DROP ---
+
+        // Limpieza de inputs y errores al abrir modal de creación
+        document.getElementById('modalNuevaLista').addEventListener('show.bs.modal', () => {
+            document.getElementById('nombreListaInput').value = "";
+            document.getElementById('errorModal').style.display = "none";
+        });
+
+        function procesarNuevaLista() {
+            const input = document.getElementById('nombreListaInput');
+            const nombre = input.value;
+            
+            if (!nombre || nombre.trim() === "") {
+                mostrarError("El nombre no puede estar vacío.");
+                return;
+            }
 
             const nombreLimpio = nombre.trim();
             const limiteLetras = 30;
 
             if (nombreLimpio.length > limiteLetras) {
-                alert(`El nombre es muy largo. El máximo permitido son ${limiteLetras} caracteres.`);
+                mostrarError(`El nombre es muy largo. Máximo ${limiteLetras} caracteres.`);
                 return;
             }
 
@@ -137,43 +332,55 @@
 
             if (!existeDuplicado) {
                 listas.push(nombreLimpio);
-                guardarListas(); // Usa la nueva función con clave personalizada
+                guardarListas(); 
                 renderizar();
+                modalNuevaListaBS.hide();
             } else {
-                alert("Ya existe una lista con ese nombre.");
+                mostrarError("Ya existe una lista con ese nombre.");
             }
         }
 
-        // 4. ELIMINAR CON IDENTIDAD: Envía la cabecera al borrar para no afectar a otros usuarios
-        async function eliminarLista(event, nombre, index) {
-            event.stopPropagation();
+        function mostrarError(mensaje) {
+            const errorDiv = document.getElementById('errorModal');
+            errorDiv.textContent = mensaje;
+            errorDiv.style.display = "block";
+        }
 
-            const confirmar = confirm(`¿Estás seguro de borrar la lista "${nombre}"?\nEsto también eliminará todos tus productos de esa categoría.`);
-            
-            if (confirmar) {
-                try {
-                    const res = await fetch(`${API}?categoria=${encodeURIComponent(nombre)}`, {
-                        method: "DELETE",
-                        headers: {
-                            "X-Usuario": usuarioLogueado // El servidor borrará solo tus productos de esta lista
-                        }
-                    });
+        function prepararEliminado(event, nombre, index) {
+            event.stopPropagation(); // Evita que se dispare el abrirLista() de la tarjeta o el drag
 
-                    if (res.ok) {
-                        listas.splice(index, 1);
-                        guardarListas();
-                        renderizar();
-                    } else {
-                        alert("Error al borrar los datos del servidor.");
+            listaSeleccionadaParaBorrar.nombre = nombre;
+            listaSeleccionadaParaBorrar.index = index;
+
+            document.getElementById('nombreListaABorrar').textContent = `"${nombre}"`;
+            modalEliminarListaBS.show();
+        }
+
+        async function confirmarEliminarLista() {
+            const { nombre, index } = listaSeleccionadaParaBorrar;
+
+            try {
+                const res = await fetch(`${API}?categoria=${encodeURIComponent(nombre)}`, {
+                    method: "DELETE",
+                    headers: {
+                        "X-Usuario": usuarioLogueado 
                     }
-                } catch (error) {
-                    console.error("Error:", error);
-                    alert("No se pudo conectar con el servidor.");
+                });
+
+                if (res.ok) {
+                    listas.splice(index, 1);
+                    guardarListas();
+                    renderizar();
+                    modalEliminarListaBS.hide();
+                } else {
+                    alert("Error al borrar los datos del servidor.");
                 }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("No se pudo conectar con el servidor.");
             }
         }
         
-        // Guarda en el almacén exclusivo del usuario activo
         function guardarListas() {
             localStorage.setItem(claveListas, JSON.stringify(listas));
         }

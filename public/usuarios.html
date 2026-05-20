@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administración - Usuarios</title>
+    <!-- Reutilizamos tus estilos base y añadimos Bootstrap -->
+    <link rel="stylesheet" href="/css/tablestyle.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div>
+            <strong>Gestor de Inventarios - Administración</strong>
+        </div>
+        <div id="usuario-navbar" class="usuario-navbar"></div>
+    </nav>
+
+    <div class="header-container mt-4">
+        <a href="list.html" class="back-link">← Volver al Panel Principal</a>
+        <h1 class="my-2">Control de Usuarios / Empleados</h1>
+    </div>
+
+    <!-- Buscador en tiempo real para empleados -->
+    <div class="search-container my-3" style="max-width: 400px; margin: 0 auto;">
+        <input type="text" id="buscador-usuarios" class="form-control" placeholder="🔍 Buscar por nombre o rol...">
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre de Usuario</th>
+                <th>Rol / Permisos</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="usuarios-cuerpo">
+            <!-- Se carga dinámicamente -->
+        </tbody>
+    </table>
+
+    <script>
+        // Ajusta esta URL según cómo se llame la ruta de usuarios en tu backend de Express
+        const API_USUARIOS = "http://localhost:3000/usuarios"; 
+        const usuarioLogueado = localStorage.getItem('usuario_logueado');
+        const inputBuscador = document.getElementById("buscador-usuarios");
+
+        // Bloqueo preventivo en el cliente
+       
+
+// CONTROL DE ACCESO INMEDIATO (Doble protección en el cliente)
+        if (!usuarioLogueado) {
+            alert("No autorizado. Inicie sesión.");
+            window.location.href = "index.html";
+        } else if (usuarioLogueado !== 'admin') { 
+            // Si está logueado pero NO es el admin, lo regresamos a sus listas
+            alert("Acceso denegado: No tienes permisos de administrador.");
+            window.location.href = "list.html";
+        }
+
+
+        function renderNavbar() { 
+            const contenedor = document.getElementById('usuario-navbar');
+            if (usuarioLogueado) {
+                contenedor.innerHTML = `
+                    <span>Admin: <strong class="text-danger">${usuarioLogueado}</strong></span>
+                    <button type="button" class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+                `;
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('usuario_logueado');
+            window.location.href = "index.html";
+        }
+
+        // Cargar lista completa de usuarios desde el Servidor
+        async function cargarUsuarios() {
+            try {
+                const res = await fetch(API_USUARIOS, {
+                    method: "GET",
+                    headers: {
+                        "X-Usuario": usuarioLogueado // El backend verificará si este usuario es Admin
+                    }
+                });
+
+                // Si el servidor responde 401 o 403 
+                if (!res.ok) {
+                    const mensaje = await res.text();
+                    alert(mensaje || "Acceso denegado: Solo administradores.");
+                    window.location.href = "list.html"; // Lo saca de aquí y lo manda a sus listas
+                    return;
+                }
+
+                const usuarios = await res.json();
+                const cuerpo = document.getElementById("usuarios-cuerpo");
+                cuerpo.innerHTML = "";
+
+                usuarios.forEach(u => {
+                    cuerpo.innerHTML += `
+                        <tr class="fila-usuario">
+                            <td>${u.id}</td>
+                            <td><strong class="nombre-usuario">${u.username || u.nombre}</strong></td>
+                            <td><span class="badge ${u.rol === 'admin' ? 'bg-danger' : 'bg-primary'} rol-usuario">${u.rol}</span></td>
+                            <td><span class="text-success">Activo</span></td>
+                            <td>
+                                <!-- Aquí puedes añadir funciones futuras como dar de baja o cambiar rol -->
+                                <button class="btn btn-sm btn-outline-secondary" onclick="alert('Funcionalidad en desarrollo')">Gestionar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+            } catch (e) {
+                console.error("Error al conectar con el panel de administración:", e);
+                alert("Hubo un error al validar tus credenciales de Administrador.");
+                window.location.href = "list.html";
+            }
+        }
+
+        // Buscador interno para cuando hay muchos empleados
+        inputBuscador.addEventListener("input", () => {
+            const termino = inputBuscador.value.toLowerCase().trim();
+            const filas = document.querySelectorAll(".fila-usuario");
+
+            filas.forEach(fila => {
+                const nombre = fila.querySelector(".nombre-usuario").innerText.toLowerCase();
+                const rol = fila.querySelector(".rol-usuario").innerText.toLowerCase();
+
+                if (nombre.includes(termino) || rol.includes(termino)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+        });
+
+        // Inicializar la página
+        renderNavbar();
+        cargarUsuarios();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>

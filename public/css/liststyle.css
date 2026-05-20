@@ -122,3 +122,67 @@ p {
     margin-top: 10px; 
     font-size: 14px; 
 }
+
+.modal-header {
+    background: #1976D2;
+    color: white;
+}
+
+/* ESTILOS GENERALES PARA MODALES SIMPLIFICADOS */
+.modal-simplificado {
+    color: #212529; /* Reemplaza text-dark */
+}
+
+/* Forzamos que el diálogo ocupe el diseño que queremos sin tanto div */
+.modal-simplificado .modal-dialog {
+    max-width: 500px;
+    margin: 1.75rem auto;
+    display: flex;
+    align-items: center;
+    min-height: calc(100% - 3.5rem);
+}
+
+/* Caja principal del modal */
+.modal-simplificado-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 0.5rem;
+    outline: 0;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Encabezados, cuerpos y pies de los modales */
+.modal-simplificado-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-simplificado-body {
+    position: relative;
+    flex: 1 1 auto;
+    padding: 1rem;
+}
+
+.modal-simplificado-footer {
+    display: flex;
+    wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.75rem;
+    border-top: 1px solid #dee2e6;
+    gap: 0.5rem; /* Espaciado entre botones */
+}
+
+/* Variación exclusiva para el Modal de Borrar (Peligro) */
+.modal-simplificado-header.danger {
+    background-color: #dc3545; /* Reemplaza bg-danger */
+    color: #fff; /* Reemplaza text-white */
+    border-bottom: none;
+}
