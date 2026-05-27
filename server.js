@@ -22,14 +22,14 @@ const db = mysql.createConnection({
 
 // RUTA PARA REGISTRAR UN USUARIO NUEVO
 app.post("/auth/registrar", (req, res) => {
-  const { usuario, password } = req.body;
+  const { usuario, password} = req.body;
 
   if (!usuario || !password) {
-    return res.status(400).send("Usuario y contraseña son obligatorios.");
+    return res.status(400).send("Todos los campos son obligatorios.");
   }
 
   db.query(
-    "INSERT INTO usuarios (usuario, password) VALUES (?, ?)",
+    "INSERT INTO usuarios (usuario, password, rol) VALUES (?, ?)",
     [usuario, password],
     (err, result) => {
       if (err) {
@@ -68,7 +68,25 @@ app.post("/auth/login", (req, res) => {
   );
 });
 
+// Ejemplo de la ruta en tu Backend (Node.js + Express)
+app.get('/usuarios', (req, res) => {
+    // 1. Capturamos el usuario que viene desde el HTML
+    const usuarioRecibido = req.headers['x-usuario']; 
 
+    // 2. Validamos si es el administrador del sistema
+    // (Aquí puedes buscarlo en tu base de datos o hacer una comprobación directa)
+    if (usuarioRecibido === 'Leandro') {
+      db.query("SELECT * FROM usuarios", (err, listaEmpleados) => {
+        // Lista de ejemplo de usuarios que devolverá si eres Admin
+       // Aquí deberías hacer la consulta real a tu base de datos
+        
+        return res.json(listaEmpleados); // Devuelve los datos con éxito (res.ok será true)
+      });
+    } else {
+        // Si viene cualquier otro usuario, el servidor responde con Bloqueo
+        return res.status(403).send("No tienes permisos para ver esta sección.");
+    }
+});
 // ==========================================
 // RUTAS DE STOCK (Filtradas por usuario)
 // ==========================================
@@ -229,43 +247,7 @@ app.post("/auth/cerrar-sesion", (req, res) => {
   res.send("Sesión cerrada exitosamente.");
 });
 
-// Calcula dinámicamente qué tarjeta está más cerca del puntero del mouse
-function obtenerElementoDropPosicion(contenedor, x, y) {
-    const tarjetasFijas = [...contenedor.querySelectorAll('.card:not(.dragging)')];
 
-    return tarjetasFijas.reduce((masCercano, hijo) => {
-        const caja = hijo.getBoundingClientRect();
-        
-        // Medimos la distancia al centro de cada tarjeta (aplica perfecto para layouts tipo Grid)
-        const centroX = caja.left + caja.width / 2;
-        const centroY = caja.top + caja.height / 2;
-        const distancia = Math.pow(x - centroX, 2) + Math.pow(y - centroY, 2);
-
-        // CORREGIDO: Usamos una propiedad válida sin espacios (distanciaMinima)
-        if (distancia < masCercano.distanciaMinima) {
-            return { distanciaMinima: distancia, element: hijo };
-        } else {
-            return masCercano;
-        }
-    }, { distanciaMinima: Number.POSITIVE_INFINITY }).element;
-}
-
-// Lee el nuevo orden visual del DOM y actualiza el array en el LocalStorage
-function recalcularNuevoOrden() {
-    const contenedor = document.getElementById('contenedor-listas');
-    const tarjetasActuales = [...contenedor.querySelectorAll('.card')];
-    
-    // Reconstruimos el array basándonos en la posición física actual de los elementos
-    listas = tarjetasActuales.map(tarjeta => tarjeta.dataset.nombre);
-    
-    guardarListas();
-    
-    // Agregamos un ligero timeout de 50ms para que el evento 'click' del 'dragend' 
-    // se procese antes de que destruyamos y recreemos el DOM con renderizar()
-    setTimeout(() => {
-        renderizar();
-    }, 50);
-}
 // Servidor de archivos estáticos
 app.use(express.static('public')); 
 

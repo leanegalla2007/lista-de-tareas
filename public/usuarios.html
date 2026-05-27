@@ -54,7 +54,7 @@
         if (!usuarioLogueado) {
             alert("No autorizado. Inicie sesión.");
             window.location.href = "index.html";
-        } else if (usuarioLogueado !== 'admin') { 
+        } else if (usuarioLogueado !== 'Leandro') { 
             // Si está logueado pero NO es el admin, lo regresamos a sus listas
             alert("Acceso denegado: No tienes permisos de administrador.");
             window.location.href = "list.html";
@@ -102,7 +102,7 @@
                     cuerpo.innerHTML += `
                         <tr class="fila-usuario">
                             <td>${u.id}</td>
-                            <td><strong class="nombre-usuario">${u.username || u.nombre}</strong></td>
+                            <td><strong class="nombre-usuario">${u.usuario || u.nombre}</strong></td>
                             <td><span class="badge ${u.rol === 'admin' ? 'bg-danger' : 'bg-primary'} rol-usuario">${u.rol}</span></td>
                             <td><span class="text-success">Activo</span></td>
                             <td>

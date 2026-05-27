@@ -32,9 +32,6 @@
             <strong>Gestor de Inventarios</strong>
         </div>
         <div id="usuario-navbar" class="usuario-navbar"></div>
-        <button id="btn-admin-panel" class="btn btn-danger" style="display: none;" onclick="window.location.href='usuarios.html'">
-    ⚙️ Panel Admin (Usuarios)
-</button>
     </nav>
 
     <h1>Gestor de Inventarios</h1>
@@ -132,6 +129,9 @@
                 contenedor.innerHTML = `
                     <span>Usuario: <strong>${usuarioLogueado}</strong></span>
                     <button type="button" class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+                    <button id="btn-admin-panel" class="btn btn-danger" style="display: none;" onclick="window.location.href='usuarios.html'">
+                            ⚙️ Panel Admin (Usuarios)
+                    </button>
                 `;
             } else {
                 contenedor.innerHTML = '<span>Sesión no iniciada</span>';
@@ -251,33 +251,41 @@
         // Calcula dinámicamente qué tarjeta está más cerca del puntero del mouse
         // Calcula dinámicamente qué tarjeta debe ser la "siguiente" según la posición del mouse
 // Calcula la posición reduciendo el parpadeo (flickering) mediante un umbral de tolerancia
+// Calcula la posición reduciendo el parpadeo (flickering) mediante un umbral de tolerancia corregido
 function obtenerElementoDropPosicion(contenedor, x, y) {
+    // 1. Obtenemos todas las tarjetas fijas
     const tarjetasFijas = [...contenedor.querySelectorAll('.card:not(.dragging)')];
-    const tarjetaArrastrada = document.querySelector('.dragging');
+    const tarjetaArrastrada = contenedor.querySelector('.dragging');
     
     if (!tarjetaArrastrada) return null;
 
-    // Obtenemos el ancho de la tarjeta que llevas en la mano para calcular la tolerancia
-    const anchoTarjeta = tarjetaArrastrada.getBoundingClientRect().width;
-    const tolerancia = anchoTarjeta * 0.30; // 50% de margen de seguridad
+    // 2. FILTRADO POR FILA: Nos quedamos solo con las tarjetas que el mouse está tocando verticalmente (eje Y)
+    const tarjetasEnMismaFila = tarjetasFijas.filter(hijo => {
+        const caja = hijo.getBoundingClientRect();
+        // Agregamos un pequeño margen de 10px arriba y abajo por si acaso hay espacios (gaps)
+        return y >= (caja.top - 20) && y <= (caja.bottom + 20);
+    });
 
-    return tarjetasFijas.find(hijo => {
+    // 3. Si el mouse no está sobre ninguna fila concreta (está en un espacio vacío),
+    // usamos todas las tarjetas para que no se congele el arrastre
+    const tarjetasAEvaluar = tarjetasEnMismaFila.length > 0 ? tarjetasEnMismaFila : tarjetasFijas;
+
+    // 4. Aplicamos la lógica horizontal solo a los elementos de esa fila
+    return tarjetasAEvaluar.find(hijo => {
         const caja = hijo.getBoundingClientRect();
         const centroX = caja.left + caja.width / 2;
-
-        // Averiguamos si la tarjeta fija está antes o después de la que estamos arrastrando en el DOM
+        
         const esAnterior = tarjetaArrastrada.compareDocumentPosition(hijo) & Node.DOCUMENT_POSITION_PRECEDING;
 
         if (esAnterior) {
-            // Si nos movemos hacia la IZQUIERDA: el mouse debe superar el centro hacia la izquierda (+ tolerancia)
-            return x < (centroX - tolerancia);
+            // Moviéndose a la IZQUIERDA dentro de su fila
+            return x < (centroX + (caja.width * 0.30));
         } else {
-            // Si nos movemos hacia la DERECHA: el mouse debe superar el centro hacia la derecha (- tolerancia)
-            return x < (centroX + tolerancia);
+            // Moviéndose a la DERECHA dentro de su fila
+            return x < (centroX - (caja.width * 0.30));
         }
     });
 }
-
 
         function abrirListaSiNoArrastre(event, nombre) {
             if (seEstaArrastrando) {
@@ -290,7 +298,7 @@ function obtenerElementoDropPosicion(contenedor, x, y) {
         }
 
         // Lee el nuevo orden visual del DOM y actualiza el array en el LocalStorage
-        function recalcularNuevoOrden() {
+         function recalcularNuevoOrden() {
             const contenedor = document.getElementById('contenedor-listas');
             const tarjetasActuales = [...contenedor.querySelectorAll('.card')];
             
