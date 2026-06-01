@@ -194,124 +194,24 @@
                     ? datos.productos.join(", ")
                     : "Sin productos todavía";
 
-                // Se añade el atributo draggable="true" y el dataset con el nombre de la lista
+                // Retiramos el onclick de la tarjeta para usarlo puramente de Drag & Drop
+                // y añadimos un botón explícito para entrar a la lista.
                 contenedor.innerHTML += `
-                    <div class="card" draggable="true" data-nombre="${nombre}" onclick="abrirListaSiNoArrastre(event, '${nombre}')">
-                        <button class="btn-borrar" onclick="prepararEliminado(event, '${nombre}', ${index})">x</button>
+                    <div class="card" draggable="true" data-nombre="${nombre}">
+                        <button class="btn-borrar" title="Eliminar lista" onclick="prepararEliminado(event, '${nombre}', ${index})">x</button>
                         <h3>${nombre}</h3>
                         <p>${datos.total} producto(s)</p>
                         <p>${preview}</p>
+                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="abrirLista('${nombre}')">Entrar a la Tabla</button>
                     </div>
                 `;
             });
 
             // Una vez añadidas las tarjetas al DOM, activamos los listeners para arrastrarlas
-            inicializarDragAndDrop();
+            
         }
 
-        // --- NUEVA SECCIÓN: LÓGICA DRAG AND DROP ---
-        function inicializarDragAndDrop() {
-            const contenedor = document.getElementById('contenedor-listas');
-            const tarjetas = contenedor.querySelectorAll('.card');
-
-            tarjetas.forEach(tarjeta => {
-                tarjeta.addEventListener('dragstart', (e) => {
-                    seEstaArrastrando = true;
-                    tarjeta.classList.add('dragging');
-                    // Compatibilidad con Firefox
-                    e.dataTransfer.setData('text/plain', ''); 
-                });
-
-                tarjeta.addEventListener('dragend', () => {
-                    tarjeta.classList.remove('dragging');
-                    recalcularNuevoOrden();
-
-                    // Evita abrir la tarjeta por el click residual justo al terminar de arrastrar
-                    setTimeout(() => {
-                        seEstaArrastrando = false;
-                    }, 0);
-                });
-            });
-
-            contenedor.ondragover = (e) => {
-                e.preventDefault(); // Permite soltar elementos dentro
-                const tarjetaArrastrada = document.querySelector('.dragging');
-                if (!tarjetaArrastrada) return;
-
-                const siguienteElemento = obtenerElementoDropPosicion(contenedor, e.clientX, e.clientY);
-                
-                if (siguienteElemento == null) {
-                    contenedor.appendChild(tarjetaArrastrada);
-                } else {
-                    contenedor.insertBefore(tarjetaArrastrada, siguienteElemento);
-                }
-            };
-        }
-
-        // Calcula dinámicamente qué tarjeta está más cerca del puntero del mouse
-        // Calcula dinámicamente qué tarjeta debe ser la "siguiente" según la posición del mouse
-// Calcula la posición reduciendo el parpadeo (flickering) mediante un umbral de tolerancia
-// Calcula la posición reduciendo el parpadeo (flickering) mediante un umbral de tolerancia corregido
-function obtenerElementoDropPosicion(contenedor, x, y) {
-    // 1. Obtenemos todas las tarjetas fijas
-    const tarjetasFijas = [...contenedor.querySelectorAll('.card:not(.dragging)')];
-    const tarjetaArrastrada = contenedor.querySelector('.dragging');
-    
-    if (!tarjetaArrastrada) return null;
-
-    // 2. FILTRADO POR FILA: Nos quedamos solo con las tarjetas que el mouse está tocando verticalmente (eje Y)
-    const tarjetasEnMismaFila = tarjetasFijas.filter(hijo => {
-        const caja = hijo.getBoundingClientRect();
-        // Agregamos un pequeño margen de 10px arriba y abajo por si acaso hay espacios (gaps)
-        return y >= (caja.top - 20) && y <= (caja.bottom + 20);
-    });
-
-    // 3. Si el mouse no está sobre ninguna fila concreta (está en un espacio vacío),
-    // usamos todas las tarjetas para que no se congele el arrastre
-    const tarjetasAEvaluar = tarjetasEnMismaFila.length > 0 ? tarjetasEnMismaFila : tarjetasFijas;
-
-    // 4. Aplicamos la lógica horizontal solo a los elementos de esa fila
-    return tarjetasAEvaluar.find(hijo => {
-        const caja = hijo.getBoundingClientRect();
-        const centroX = caja.left + caja.width / 2;
         
-        const esAnterior = tarjetaArrastrada.compareDocumentPosition(hijo) & Node.DOCUMENT_POSITION_PRECEDING;
-
-        if (esAnterior) {
-            // Moviéndose a la IZQUIERDA dentro de su fila
-            return x < (centroX + (caja.width * 0.30));
-        } else {
-            // Moviéndose a la DERECHA dentro de su fila
-            return x < (centroX - (caja.width * 0.30));
-        }
-    });
-}
-
-        function abrirListaSiNoArrastre(event, nombre) {
-            if (seEstaArrastrando) {
-                event.preventDefault();
-                event.stopPropagation();
-                return;
-            }
-
-            abrirLista(nombre);
-        }
-
-        // Lee el nuevo orden visual del DOM y actualiza el array en el LocalStorage
-         function recalcularNuevoOrden() {
-            const contenedor = document.getElementById('contenedor-listas');
-            const tarjetasActuales = [...contenedor.querySelectorAll('.card')];
-            
-            // Reconstruimos el array basándonos en la posición física actual de los elementos
-            listas = tarjetasActuales.map(tarjeta => tarjeta.dataset.nombre);
-            
-            guardarListas();
-            
-            // Volvemos a renderizar para actualizar los índices de los botones de eliminado correctamente
-            renderizar();
-        }
-        // --- FIN SECCIÓN DRAG AND DROP ---
-
         // Limpieza de inputs y errores al abrir modal de creación
         document.getElementById('modalNuevaLista').addEventListener('show.bs.modal', () => {
             document.getElementById('nombreListaInput').value = "";

@@ -1,5 +1,5 @@
 const db = require("../config/db"); // Opcional, si haces los chequeos de usuario aquí
-const Producto = require("../models/productoModel");
+const path = require("path");
 
 const obtenerStock = (req, res) => {
   const { categoria } = req.query;
@@ -14,13 +14,28 @@ const obtenerStock = (req, res) => {
     
     const usuario_id = users[0].id;
     
-    Producto.obtenerPorUsuario(usuario_id, categoria, (err, result) => {
+    // Traer productos que pertenezcan EXCLUSIVAMENTE a este usuario
+    let sql = "SELECT * FROM productos WHERE usuario_id = ?";
+    let params = [usuario_id];
+
+    if (categoria) {
+      sql += " AND categoria = ?";
+      params.push(categoria);
+    }
+
+    db.query(sql, params, (err, result) => {
       if (err) return res.status(500).send(err);
       res.json(result);
     });
   });
 };
 
+const obtenerVistaProductos = (req, res) => {
+  // Retorna el HTML de la tabla de productos (la vista estática)
+  res.sendFile(path.join(__dirname, "../public/table.html"));
+}; 
+
 module.exports = {
-  obtenerStock
-};2
+  obtenerStock,
+  obtenerVistaProductos
+};
