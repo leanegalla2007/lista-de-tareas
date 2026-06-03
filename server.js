@@ -1,12 +1,20 @@
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
+ // Importas tus rutas separadas
+const stockRoutes = require("./routes/stockRoutes");
 
 const app = express();
 
 // Habilita el parseo de JSON para recibir datos en el body
 app.use(express.json());
 app.use(cors());
+app.use(express.static('public'));
+
+// Conectas las rutas al servidor
+app.use("/", stockRoutes);
+
+app.listen(3000, () => console.log("Servidor corriendo en http://localhost:3000"));
 
 // Conexión a la base de datos
 const db = mysql.createConnection({
@@ -91,42 +99,41 @@ app.get('/usuarios', (req, res) => {
 // RUTAS DE STOCK (Filtradas por usuario)
 // ==========================================
 
-const stockRoutes = require("./routes/stockRoutes");
-app.use("/stock", stockRoutes);
+
 
 // CREAR producto asociado al usuario
-app.post("/stock", (req, res) => {
-  const usuario = req.headers["x-usuario"];
-  const producto = req.body.producto || req.body.descripcion;
-  const fecha = req.body.fecha || null;
-  const marca = req.body.marca || null;
-  const unidad = req.body.unidad || null;
-  const precio = req.body.precio === "" || req.body.precio == null ? null : req.body.precio;
-  const categoria = req.body.categoria || null;
+// app.post("/stock", (req, res) => {
+//   const usuario = req.headers["x-usuario"];
+//   const producto = req.body.producto || req.body.descripcion;
+//   const fecha = req.body.fecha || null;
+//   const marca = req.body.marca || null;
+//   const unidad = req.body.unidad || null;
+//   const precio = req.body.precio === "" || req.body.precio == null ? null : req.body.precio;
+//   const categoria = req.body.categoria || null;
 
-  if (!usuario) return res.status(401).send("No autorizado. Inicie sesión.");
-  if (!producto) return res.status(400).send("Falta el nombre del producto");
-  if (!categoria) return res.status(400).send("Falta la categoría del producto");
+//   if (!usuario) return res.status(401).send("No autorizado. Inicie sesión.");
+//   if (!producto) return res.status(400).send("Falta el nombre del producto");
+//   if (!categoria) return res.status(400).send("Falta la categoría del producto");
 
-  // 1. Buscamos el ID del usuario actual
-  db.query("SELECT id FROM usuarios WHERE usuario = ?", [usuario], (err, users) => {
-    if (err || users.length === 0) return res.status(401).send("Usuario inválido.");
-    const usuario_id = users[0].id;
+//   // 1. Buscamos el ID del usuario actual
+//   db.query("SELECT id FROM usuarios WHERE usuario = ?", [usuario], (err, users) => {
+//     if (err || users.length === 0) return res.status(401).send("Usuario inválido.");
+//     const usuario_id = users[0].id;
 
-    // 2. Insertamos guardando la relación con su usuario_id
-    db.query(
-      "INSERT INTO productos (producto, fecha, marca, unidad, precio, categoria, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [producto, fecha, marca, unidad, precio, categoria, usuario_id],
-      (err, result) => {
-        if (err) {
-          console.error("Error al insertar producto:", err);
-          return res.status(500).send("No se pudo guardar el producto");
-        }
-        res.send("Producto agregado");
-      }
-    );
-  });
-});
+//     // 2. Insertamos guardando la relación con su usuario_id
+//     db.query(
+//       "INSERT INTO productos (producto, fecha, marca, unidad, precio, categoria, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+//       [producto, fecha, marca, unidad, precio, categoria, usuario_id],
+//       (err, result) => {
+//         if (err) {
+//           console.error("Error al insertar producto:", err);
+//           return res.status(500).send("No se pudo guardar el producto");
+//         }
+//         res.send("Producto agregado");
+//       }
+//     );
+//   });
+// });
 
 // ACTUALIZAR producto (Verificando propiedad)
 app.put("/stock/:id", (req, res) => {
@@ -222,6 +229,4 @@ app.post("/auth/cerrar-sesion", (req, res) => {
 
 
 // Servidor de archivos estáticos
-app.use(express.static('public')); 
-
-app.listen(3000, () => console.log("Servidor corriendo en http://localhost:3000"));
+// app.use(express.static('public')); 

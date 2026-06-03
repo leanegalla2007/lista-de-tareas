@@ -3,20 +3,11 @@ const router = express.Router();
 const stockController = require("../controllers/stockController");
 
 // URL: /stock
-router.get("/", stockController.obtenerStock);
-// router.post("/", stockController.crearProducto); 
+router.get("/home", stockController.home);
+router.get("/stock", stockController.obtenerStock);
+router.post("/crear", stockController.crearProductos); 
 // router.put("/:id", stockController.actualizarProducto);
 
-router.get("/vista", stockController.obtenerVistaProductos);
-
-router.post("/stock", (req, res) => {
-  const usuario = req.headers["x-usuario"];
-  const producto = req.body.producto || req.body.descripcion;
-  const fecha = req.body.fecha || null;
-  const marca = req.body.marca || null;
-  const unidad = req.body.unidad || null;
-  const precio = req.body.precio === "" || req.body.precio == null ? null : req.body.precio;
-  const categoria = req.body.categoria || null;
-});
+// router.get("/vista", stockController.obtenerVistaProductos);
 
 module.exports = router;

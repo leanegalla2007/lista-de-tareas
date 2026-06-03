@@ -1,19 +1,22 @@
 const db = require("../config/db");
 
 const Producto = {
-  obtenerPorUsuario: (usuario_id, categoria, callback) => {
-    let sql = "SELECT * FROM productos WHERE usuario_id = ?";
-    let params = [usuario_id];
-    
-    if (categoria) {
-        sql += " AND categoria = ?";
-        params.push(categoria);
-    }
-    
-    db.query(sql, params, callback);
+   // Asegúrate de que esta sea la ruta a tu conexión de BD
+  // Método para buscar el ID de un usuario por su nombre
+  buscarUsuarioPorNombre: (usuario, callback) => {
+    db.query("SELECT id FROM usuarios WHERE usuario = ?", [usuario], callback);
   },
-  
-  // Aquí puedes agregar crear, actualizar, eliminar...
-};
 
+  // Método para insertar el producto en la base de datos
+  crear: (datosProducto, callback) => {
+    const { producto, fecha, marca, unidad, precio, categoria, usuario_id } = datosProducto;
+    
+    db.query(
+      "INSERT INTO productos (producto, fecha, marca, unidad, precio, categoria, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [producto, fecha, marca, unidad, precio, categoria, usuario_id],
+      callback
+    );
+  }
+};
+  // Aquí puedes agregar crear, actualizar, eliminar...
 module.exports = Producto;
