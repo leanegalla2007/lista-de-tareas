@@ -18,6 +18,26 @@ const Producto = {
   
   buscarUsuarioPorNombre: (usuario, callback) => {
     db.query("SELECT id FROM usuarios WHERE usuario = ?", [usuario], callback);
+  },
+
+
+  crear: (datosProducto, callback) => {
+    const { producto, fecha, marca, unidad, precio, categoria, usuario_id } = datosProducto;
+    
+    db.query(
+      "INSERT INTO productos (producto, fecha, marca, unidad, precio, categoria, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [producto, fecha, marca, unidad, precio, categoria, usuario_id],
+      callback
+    );
+  },
+
+  actualizar: (datosProducto, callback) => {
+    const {producto, fecha, marca, unidad, precio, categoria, usuario_id, id } = datosProducto;
+    db.query(
+      "UPDATE productos SET producto = ?, marca = ?, precio = ?, unidad = ?, fecha = ?, categoria = ?, WHERE id = ? AND usuario_id = ?",
+      [producto, marca, precio, unidad, fecha, categoria, id, usuario_id],
+      callback
+    );
   }
 };
   // Aquí puedes agregar crear, actualizar, eliminar...

@@ -212,17 +212,17 @@
                 categoria: listaActiva
             };
 
-            const res = await fetch(`${API}/${id}`, {
+            const res = await fetch(`${id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-Usuario": usuarioLogueado
+                    "x-usuario": usuarioLogueado
                 },
                 body: JSON.stringify(actualizado)
             });
 
             if (res.ok) cargar();
-            else alert("Error al actualizar");
+            else console.log(id);
         }
 
         // Agregar nuevo producto con categoría

@@ -136,32 +136,32 @@ app.get('/usuarios', (req, res) => {
 // });
 
 // ACTUALIZAR producto (Verificando propiedad)
-app.put("/stock/:id", (req, res) => {
-  const { id } = req.params;
-  const usuario = req.headers["x-usuario"];
-  const { producto, marca, precio, unidad, fecha, categoria } = req.body;
+// app.put("/stock/:id", (req, res) => {
+//   const { id } = req.params;
+//   const usuario = req.headers["x-usuario"];
+//   const { producto, marca, precio, unidad, fecha, categoria } = req.body;
 
-  if (!usuario) return res.status(401).send("No autorizado.");
-  if (!producto) return res.status(400).send("Falta el nombre del producto");
+//   if (!usuario) return res.status(401).send("No autorizado.");
+//   if (!producto) return res.status(400).send("Falta el nombre del producto");
 
-  db.query("SELECT id FROM usuarios WHERE usuario = ?", [usuario], (err, users) => {
-    if (err || users.length === 0) return res.status(401).send("Usuario inválido.");
-    const usuario_id = users[0].id;
+//   db.query("SELECT id FROM usuarios WHERE usuario = ?", [usuario], (err, users) => {
+//     if (err || users.length === 0) return res.status(401).send("Usuario inválido.");
+//     const usuario_id = users[0].id;
 
-    // Actualiza sólo si el producto tiene el ID enviado Y pertenece al usuario actual
-    db.query(
-      "UPDATE productos SET producto = ?, marca = ?, precio = ?, unidad = ?, fecha = ?, categoria = ? WHERE id = ? AND usuario_id = ?",
-      [producto, marca, precio, unidad, fecha, categoria, id, usuario_id],
-      (err, result) => {
-        if (err) {
-          console.error("Error al actualizar:", err);
-          return res.status(500).send("No se pudo actualizar el producto");
-        }
-        res.send("Producto actualizado");
-      }
-    );
-  });
-});
+//     // Actualiza sólo si el producto tiene el ID enviado Y pertenece al usuario actual
+//     db.query(
+//       "UPDATE productos SET producto = ?, marca = ?, precio = ?, unidad = ?, fecha = ?, categoria = ? WHERE id = ? AND usuario_id = ?",
+//       [producto, marca, precio, unidad, fecha, categoria, id, usuario_id],
+//       (err, result) => {
+//         if (err) {
+//           console.error("Error al actualizar:", err);
+//           return res.status(500).send("No se pudo actualizar el producto");
+//         }
+//         res.send("Producto actualizado");
+//       }
+//     );
+//   });
+// });
 
 // ELIMINAR un producto específico (Verificando propiedad)
 app.delete("/stock/:id", (req, res) => {

@@ -28,7 +28,7 @@ const obtenerStock = (req, res) => {
 const crearProductos = (req, res) => {
   const usuario = req.headers["x-usuario"];
   const producto = req.body.producto || req.body.descripcion;
-  const fecha = req.body.fecha || null;
+  const fecha = req.body.fecha === "" || req.body.fecha == null ? null : req.body.fecha;
   const marca = req.body.marca || null;
   const unidad = req.body.unidad || null;
   const precio = req.body.precio === "" || req.body.precio == null ? null : req.body.precio;
@@ -63,6 +63,39 @@ const crearProductos = (req, res) => {
     });
   });
 }; 
+
+const actualizarProducto = (req, res) => {
+  const { id } = req.params;
+  const usuario = req.headers["x-usuario"];
+  const { producto, marca, precio, unidad, fecha, categoria } = req.body;
+
+  if (!usuario) return res.status(401).send("No autorizado.");
+  if (!producto) return res.status(400).send("Falta el nombre del producto");
+
+Producto.buscarUsuarioPorNombre(usuario, (err, users) => {
+    if (err) {
+      console.error("Error al buscar usuario:", err);
+      return res.status(500).send("Error interno del servidor.");
+    }
+    if (users.length === 0) {
+      return res.status(401).send("Usuario inválido.");
+    }
+    
+    const usuario_id = users[0].id;
+
+    // Preparamos el objeto con los datos limpios para el modelo
+    const nuevosDatos = { producto, fecha, marca, unidad, precio, categoria, usuario_id, id };
+
+    // 2. Insertamos guardando la relación llamando al método del Modelo
+    Producto.actualizar(nuevosDatos, (err, result) => {
+      if (err) {
+        console.error("Error al insertar producto:", err);
+        return res.status(500).send("No se pudo guardar el producto");
+      }
+      res.send("Producto agregado");
+    });
+  });
+};
 
 
 // exports.crearProducto = (req, res) => {
@@ -107,5 +140,6 @@ const crearProductos = (req, res) => {
 
 module.exports = {
   obtenerStock,
-  crearProductos
+  crearProductos,
+  actualizarProducto
 };
