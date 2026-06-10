@@ -52,8 +52,7 @@
 
     <script>
         const API = "http://localhost:3000/stock";
-        const listaActiva = localStorage.getItem('lista_activa');
-        const usuarioActivo = localStorage.getItem("usuario"); // O como guardes tu usuario
+        const listaActiva = localStorage.getItem('lista_activa');// O como guardes tu usuario
         const usuarioLogueado = localStorage.getItem('usuario_logueado');
         const formulario = document.getElementById("formulario");
         const botonAgregar = formulario.querySelector(".agregar");
@@ -70,19 +69,19 @@
 
 
         // 🔄 FUNCIÓN PARA TRAER LOS DATOS Y DIBUJARLOS
-        async function pintarTabla() {
+        async function cargar() {
 
             try {
                 const respuesta = await fetch("/stock", {
                     method: "GET",
                     headers: {
-                        "x-usuario": usuarioActivo
+                        "x-usuario": usuarioLogueado   
                     }
                 });
 
                 if (respuesta.ok) {
                     const productos = await respuesta.json(); // Recibimos el array de objetos
-                    const tbody = document.getElementById("tabla-cuerpo"); // ID de tu <tbody> en HTML
+                    const tbody = document.getElementById("lista-cuerpo"); // ID de tu <tbody> en HTML
                     
                     tbody.innerHTML = ""; // Limpiamos la tabla para que no se dupliquen
 
@@ -107,24 +106,6 @@
                 console.error("Error al pintar la tabla:", error);
             }
         }
-
-        // 1. Ejecutar automáticamente cuando el usuario entra a Table.html
-        document.addEventListener("DOMContentLoaded", pintarTabla);
-
-        // 2. Modifica tu evento del formulario actual:
-        document.getElementById("formulario").addEventListener("submit", async function(event) {
-            event.preventDefault();
-            // ... (Tu lógica actual de Fetch POST para guardar el producto) ...
-            
-            const respuesta = await fetch("/crear", { /* ... tu configuración POST ... */ });
-            
-            if (respuesta.ok) {
-                document.getElementById("formulario").reset();
-                
-                // 🔥 LA CLAVE: Volvemos a llamar a la función para refrescar la vista
-                pintarTabla(); 
-            }
-        });
 
         function renderNavbar() { 
             const contenedor = document.getElementById('usuario-navbar');

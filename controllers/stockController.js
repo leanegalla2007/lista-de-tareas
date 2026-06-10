@@ -3,12 +3,8 @@ const path = require("path");
 const Producto = require("../models/Producto");
 
 // Metodo para retornar la vista estática home
-const home = (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/home.html"));
-};
 
 const obtenerStock = (req, res) => {
-  exports.obtenerStock = (req, res) => {
     const usuario = req.headers["x-usuario"];
     const { categoria } = req.query;
 
@@ -27,7 +23,6 @@ const obtenerStock = (req, res) => {
         res.json(productos); 
       });
     });
-  };
 }
 // crearProductos es el método que se encargará de recibir los datos del producto desde el frontend, validar el usuario y luego llamar al modelo para insertar el producto en la base de datos.
 const crearProductos = (req, res) => {
@@ -111,7 +106,6 @@ const crearProductos = (req, res) => {
 // };
 
 module.exports = {
-  home,
   obtenerStock,
   crearProductos
 };
