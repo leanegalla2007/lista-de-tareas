@@ -67,7 +67,13 @@ const crearProductos = (req, res) => {
 const actualizarProducto = (req, res) => {
   const { id } = req.params;
   const usuario = req.headers["x-usuario"];
-  const { producto, marca, precio, unidad, fecha, categoria } = req.body;
+ 
+  const producto = req.body.producto;
+  const marca = req.body.marca || null;
+  const unidad = req.body.unidad || null;
+  const precio = req.body.precio === "" || req.body.precio == null ? null : req.body.precio;
+  const fecha = req.body.fecha === "" || req.body.fecha == null ? null : req.body.fecha;
+  const categoria = req.body.categoria || null;
 
   if (!usuario) return res.status(401).send("No autorizado.");
   if (!producto) return res.status(400).send("Falta el nombre del producto");
@@ -97,49 +103,55 @@ Producto.buscarUsuarioPorNombre(usuario, (err, users) => {
   });
 };
 
+const borrarStock = (req, res) => {
+  const { categoria } = req.query; // Captura lo que viene después del '?' en la URL
+  const usuario = req.headers["x-usuario"];
 
-// exports.crearProducto = (req, res) => {
-//   const usuario = req.headers["x-usuario"];
-//   const producto = req.body.producto || req.body.descripcion;
-//   const fecha = req.body.fecha || null;
-//   const marca = req.body.marca || null;
-//   const unidad = req.body.unidad || null;
-//   const precio = req.body.precio === "" || req.body.precio == null ? null : req.body.precio;
-//   const categoria = req.body.categoria || null;
+  if (!usuario) return res.status(401).send("No autorizado.");
 
-//   // Validaciones iniciales
-//   if (!usuario) return res.status(401).send("No autorizado. Inicie sesión.");
-//   if (!producto) return res.status(400).send("Falta el nombre del producto");
-//   if (!categoria) return res.status(400).send("Falta la categoría del producto");
+  Producto.buscarUsuarioPorNombre(usuario, (err, users) => {
+    if (err || users.length === 0) return res.status(401).send("Usuario inválido.");
+    const usuario_id = users[0].id;
 
-//   // 1. Buscamos el ID del usuario actual usando el Modelo
-//   Producto.buscarUsuarioPorNombre(usuario, (err, users) => {
-//     if (err) {
-//       console.error("Error al buscar usuario:", err);
-//       return res.status(500).send("Error interno del servidor.");
-//     }
-//     if (users.length === 0) {
-//       return res.status(401).send("Usuario inválido.");
-//     }
-    
-//     const usuario_id = users[0].id;
+    Producto.vaciar(usuario_id, categoria, (err, result) => {
+      if (err) {
+        console.error("Error al vaciar/filtrar eliminación:", err);
+        return res.status(500).send("Error al procesar la eliminación");
+      }
+      
+      if (categoria) {
+        res.send("Lista borrada correctamente");
+      } else {
+        res.send("Lista vaciada correctamente");
+      }
+    });
+  });
+}
 
-//     // Preparamos el objeto con los datos limpios para el modelo
-//     const nuevosDatos = { producto, fecha, marca, unidad, precio, categoria, usuario_id };
+const eliminarProducto = (req, res) => {
+  const { id } = req.params;
+  const usuario = req.headers["x-usuario"];
 
-//     // 2. Insertamos guardando la relación llamando al método del Modelo
-//     Producto.crear(nuevosDatos, (err, result) => {
-//       if (err) {
-//         console.error("Error al insertar producto:", err);
-//         return res.status(500).send("No se pudo guardar el producto");
-//       }
-//       res.send("Producto agregado");
-//     });
-//   });
-// };
+  if (!usuario) return res.status(401).send("No autorizado.");
+
+  Producto.buscarUsuarioPorNombre(usuario, (err, users) => {
+    if (err || users.length === 0) return res.status(401).send("Usuario inválido.");
+    const usuario_id = users[0].id;
+
+    Producto.eliminar(id, usuario_id, (err, result) => {
+      if (err) {
+        console.error("Error al eliminar producto:", err);
+        return res.status(500).send("Error al eliminar el producto");
+      }
+      res.send("Producto eliminado");
+    });
+  });
+}
 
 module.exports = {
   obtenerStock,
   crearProductos,
-  actualizarProducto
+  actualizarProducto,
+  borrarStock,
+  eliminarProducto
 };

@@ -281,7 +281,7 @@
         // Eliminar un producto
         async function borrarUno(id) {
             if (confirm("¿Eliminar producto?")) {
-                const res = await fetch(`${API}/${id}`, { 
+                const res = await fetch(`${id}`, { 
                     method: "DELETE",
                     headers: {
                         "X-Usuario": usuarioLogueado
